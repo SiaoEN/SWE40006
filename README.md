@@ -144,6 +144,30 @@ Build a practical food discovery platform for Kuching that supports:
 - CI/CD: GitHub + GitHub Actions
 - Monitoring: Render + UptimeRobot
 
+## Team Setup (First Time)
+
+Use this section when a group member opens the project for the first time.
+
+### 1. Install Frontend Dependencies
+
+```bash
+cd frontend/"KCH Bites"
+npm install
+```
+
+### 2. Run Frontend in Development
+
+```bash
+npm run dev
+```
+
+Then open the local URL shown in the terminal (usually http://localhost:5173).
+
+### 3. Recommended Team Practice
+
+- Keep `package-lock.json` committed to the repository
+- Use `npm ci` instead of `npm install` for consistent package versions
+
 ## Deployment Overview
 
 - Frontend and backend deployed on Render
