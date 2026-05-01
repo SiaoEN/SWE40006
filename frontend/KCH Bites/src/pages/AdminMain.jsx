@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaWalking } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
-import "./MainPage.css";
+import "../styles/MainPage.css";
 
 export default function AdminPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
