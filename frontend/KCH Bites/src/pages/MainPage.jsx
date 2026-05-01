@@ -4,6 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css"
 import logo from "../assets/kch-bites-logo.png";
 import "../styles/MainPage.css";
+import FoodWheel from './FoodWheel';
+
 
 export default function MainPage() {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -90,6 +92,8 @@ export default function MainPage() {
 							</div>
 						)}
 					</div>
+
+					<FoodWheel />
 
 					<div className="map-section">
 						<MapContainer

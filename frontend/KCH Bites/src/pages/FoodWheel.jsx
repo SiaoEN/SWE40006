@@ -1,0 +1,109 @@
+import React, { useState } from "react";
+import "../styles/FoodWheel.css";
+
+const foods = [
+  { label: "🍜 Noodles", color: "#FFB347" },
+  { label: "🍔 Burger", color: "#FF7A00" },
+  { label: "🍕 Pizza", color: "#FFD166" },
+  { label: "🍣 Sushi", color: "#7BC67E" },
+  { label: "🥗 Salad", color: "#2EC4B6" },
+  { label: "🍗 Chicken", color: "#E76F51" },
+];
+
+export default function FoodWheel() {
+  const [open, setOpen] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [selected, setSelected] = useState("");
+  const [spinning, setSpinning] = useState(false);
+
+  const spinWheel = () => {
+    if (spinning) return;
+
+    const randomIndex = Math.floor(Math.random() * foods.length);
+    const segmentAngle = 360 / foods.length;
+    const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
+    const angle = rotation + 360 * 5 + (360 - targetAngle);
+
+    setRotation(angle);
+    setSelected("");
+    setSpinning(true);
+
+    window.setTimeout(() => {
+      setSpinning(false);
+      setSelected(foods[randomIndex].label);
+    }, 3200);
+  };
+
+  const gradientStops = foods
+    .map((food, index) => {
+      const start = (index / foods.length) * 100;
+      const end = ((index + 1) / foods.length) * 100;
+      return `${food.color} ${start}% ${end}%`;
+    })
+    .join(", ");
+
+  return (
+    <>
+      {!open && (
+        <button className="floating-btn" onClick={() => setOpen(true)} aria-label="Open food wheel">
+          <span>🍽</span>
+          <small>Spin</small>
+        </button>
+      )}
+
+      {open && (
+        <div className="wheel-overlay" role="dialog" aria-modal="true" aria-label="Food spin wheel">
+          <div className="wheel-container">
+            <button className="close-btn" onClick={() => setOpen(false)} aria-label="Close wheel">
+              ✕
+            </button>
+
+            <div className="wheel-header">
+              <p className="wheel-kicker">KCH Bites Lucky Pick</p>
+              <h2>What should you eat?</h2>
+              <p className="wheel-subtitle">Tap spin and let the wheel choose your next meal.</p>
+            </div>
+
+            <div className="wheel-stage">
+              <div className="pointer" aria-hidden="true">▼</div>
+
+              <div className="wheel-shell">
+                <div
+                  className="wheel"
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    background: `conic-gradient(${gradientStops})`,
+                  }}
+                >
+                  {foods.map((food, i) => (
+                    <div
+                      key={food.label}
+                      className="slice"
+                      style={{
+                        transform: `rotate(${i * (360 / foods.length)}deg)`,
+                      }}
+                    >
+                      <span className="slice-label">{food.label}</span>
+                    </div>
+                  ))}
+
+                  <div className="wheel-core">
+                    <span className="wheel-core-icon">🍽</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="wheel-actions">
+              <button className="spin-btn" onClick={spinWheel} disabled={spinning}>
+                {spinning ? "Spinning..." : "Spin the Wheel"}
+              </button>
+
+              {selected && <p className="result">You got: <strong>{selected}</strong></p>}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
