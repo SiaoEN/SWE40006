@@ -15,14 +15,8 @@ function createSection(type = 'paragraph') {
 
 function normalizeSectionsForForm(sections = []) {
   const normalizedSections = [];
-  let details = '';
 
-  sections.forEach((section, index) => {
-    if (index === 0 && section.type === 'paragraph') {
-      details = section.text || '';
-      return;
-    }
-
+  sections.forEach((section) => {
     if (section.type === 'paragraph') {
       normalizedSections.push({
         id: section.id || createSection('paragraph').id,
@@ -69,19 +63,11 @@ function normalizeSectionsForForm(sections = []) {
     }
   });
 
-  return { details, sections: normalizedSections };
+  return normalizedSections;
 }
 
-function buildSectionsPayload(details, sections) {
+function buildSectionsPayload(sections) {
   const payloadSections = [];
-
-  if (details.trim()) {
-    payloadSections.push({
-      type: 'paragraph',
-      title: '',
-      text: details.trim(),
-    });
-  }
 
   sections.forEach((section) => {
     if (section.type === 'paragraph') {
@@ -151,7 +137,6 @@ function buildSectionsPayload(details, sections) {
 const emptyForm = {
   title: '',
   description: '',
-  details: '',
   sections: [],
 };
 
@@ -266,7 +251,7 @@ export default function AdminNewsPage() {
     }
 
     const timestamp = formatPostTimestamp();
-    const sectionsPayload = buildSectionsPayload('', formData.sections);
+    const sectionsPayload = buildSectionsPayload(formData.sections);
 
     if (editingItemId) {
       (async () => {
@@ -378,8 +363,7 @@ export default function AdminNewsPage() {
     setFormData({
       title: item.title,
       description: item.description,
-      details: normalized.details || item.details || '',
-      sections: normalized.sections,
+      sections: normalized,
     });
     setExpandedItemId(item.id);
   };
