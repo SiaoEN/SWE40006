@@ -3,13 +3,40 @@ import { FaUserCircle, FaBell, FaFilter, FaWalking, FaEnvelope, FaFacebook, FaIn
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css"
 import logo from "../assets/kch-bites-logo.png";
-import "../styles/MainPage.css";
-import FoodWheel from './FoodWheel';
-
+import logoutIcon from "../assets/logout.png";
+import "./MainPage.css";
 
 export default function MainPage() {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+	const [selectedCategories, setSelectedCategories] = useState([]);
+	const [distance, setDistance] = useState(10);
+	const [operationHours, setOperationHours] = useState("open-now");
+	const [specificTime, setSpecificTime] = useState("12:00");
+	const [rating, setRating] = useState("4");
+
+	const toggleCategory = (category) => {
+		setSelectedCategories((currentCategories) =>
+			currentCategories.includes(category)
+				? currentCategories.filter((item) => item !== category)
+				: [...currentCategories, category]
+		);
+	};
+
+	const clearFilters = () => {
+		setSelectedCategories([]);
+		setDistance(10);
+		setOperationHours("open-now");
+		setSpecificTime("12:00");
+		setRating("4");
+	};
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+
+		window.location.href = "/login";
+	}
 
 	return (
 		<div className="main-page">
@@ -59,13 +86,18 @@ export default function MainPage() {
 					<h3>Name</h3>
 				</div>
 
-				<nav className="side-menu">
-					<p className="side-menu-item">Profile</p>
-					<p className="side-menu-item">Feedback</p>
-					<p className="side-menu-item">Community</p>
-				</nav>
+				<div className="side-menu-wrap">
+					<nav className="side-menu">
+						<p className="side-menu-item">Profile</p>
+						<p className="side-menu-item">Feedback</p>
+						<p className="side-menu-item">Community</p>
+					</nav>
+				</div>
 
-				<FaWalking className="walking-icon" />
+				<button type="button" className="logout-button" onClick={handleLogout}>
+					<img src={logoutIcon} alt="Logout" className="logout-icon" />
+					<span>LogOut</span>
+				</button>
 			</aside>
 
 			<main className="page-content">
@@ -84,16 +116,130 @@ export default function MainPage() {
 
 						{isDropdownOpen && (
 							<div className="dropdown-menu">
-								<h5>Dropdown Menu</h5>
-								<p>Categories</p>
-								<p>Distance</p>
-								<p>Operation hours (days & time)</p>
-								<p>Rating</p>
+								<div className="dropdown-header">
+									<h5>Filter Search</h5>
+									<p>Refine results by category, distance, time, and rating.</p>
+								</div>
+
+								<div className="filter-group">
+									<div className="filter-label">Categories</div>
+									<div className="category-chips" role="group" aria-label="Restaurant categories">
+										{["Western", "Chinese", "Korean", "Local"].map((category) => (
+											<button
+												type="button"
+												key={category}
+												className={`filter-chip ${selectedCategories.includes(category) ? "filter-chip--active" : ""}`}
+												onClick={() => toggleCategory(category)}
+												aria-pressed={selectedCategories.includes(category)}
+											>
+												{category}
+											</button>
+										))}
+									</div>
+								</div>
+
+								<div className="filter-group">
+									<div className="filter-row">
+										<div className="filter-label">Distance</div>
+										<span className="filter-value">{distance} km</span>
+									</div>
+									<input
+										type="range"
+										className="distance-slider"
+										min="0"
+										max="10"
+										step="1"
+										value={distance}
+										onChange={(event) => setDistance(Number(event.target.value))}
+										aria-label="Distance filter in kilometers"
+									/>
+									<div className="slider-scale">
+										<span>0 km</span>
+										<span>10 km</span>
+									</div>
+								</div>
+
+								<div className="filter-group">
+									<div className="filter-label">Operation hours</div>
+									<label className="filter-option">
+										<input
+											type="radio"
+											name="operation-hours"
+											value="open-now"
+											checked={operationHours === "open-now"}
+											onChange={() => setOperationHours("open-now")}
+										/>
+										<span>Open Now</span>
+									</label>
+									<label className="filter-option">
+										<input
+											type="radio"
+											name="operation-hours"
+											value="open-today"
+											checked={operationHours === "open-today"}
+											onChange={() => setOperationHours("open-today")}
+										/>
+										<span>Open Today</span>
+									</label>
+									<label className="filter-option">
+										<input
+											type="radio"
+											name="operation-hours"
+											value="specific-time"
+											checked={operationHours === "specific-time"}
+											onChange={() => setOperationHours("specific-time")}
+										/>
+										<span>Choose specific time</span>
+									</label>
+									{operationHours === "specific-time" && (
+										<label className="time-picker-row">
+											<span className="filter-value">Time</span>
+											<input
+												type="time"
+												className="time-picker"
+												value={specificTime}
+												onChange={(event) => setSpecificTime(event.target.value)}
+												aria-label="Specific time filter"
+											/>
+										</label>
+									)}
+								</div>
+
+								<div className="filter-group">
+									<div className="filter-label">Rating</div>
+									<label className="filter-option">
+										<input
+											type="radio"
+											name="rating"
+											value="4"
+											checked={rating === "4"}
+											onChange={() => setRating("4")}
+										/>
+										<span>4★ and above</span>
+									</label>
+									<label className="filter-option">
+										<input
+											type="radio"
+											name="rating"
+											value="3"
+											checked={rating === "3"}
+											onChange={() => setRating("3")}
+										/>
+										<span>3★ and above</span>
+									</label>
+								</div>
+
+								<div className="dropdown-actions">
+									<button type="button" className="filter-action filter-action--ghost" onClick={clearFilters}>
+										Clear
+									</button>
+									<button type="button" className="filter-action" onClick={() => setIsDropdownOpen(false)}>
+										Apply
+									</button>
+								</div>
 							</div>
 						)}
 					</div>
-
-					<FoodWheel />
 
 					<div className="map-section">
 						<MapContainer
