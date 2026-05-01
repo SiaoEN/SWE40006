@@ -57,6 +57,10 @@ app.get("/", (_req, res) => {
   });
 });
 
+app.get("/health", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 app.use("/api", apiRoutes);
 
 app.use(notFound);
