@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css"
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
-import "./MainPage.css";
+import "../styles//MainPage.css";
 
 export default function MainPage() {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
