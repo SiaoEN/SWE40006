@@ -6,6 +6,9 @@ import CommunityPage from "./pages/CommunityPage";
 import EditProfilePage from "./pages/EditProfilePage";
 import FeedbackPage from "./pages/FeedbackPage";
 import NewsPage from "./pages/NewsPage";
+import AdminNewsPage from "./pages/AdminNewsPage";
+import ProfilePage from "./pages/ProfilePage";
+import AdminProfilePage from "./pages/AdminProfilePage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
@@ -19,6 +22,30 @@ export default function App() {
         path="/main"
         element={
             <MainPage />
+        }
+      />
+      <Route
+        path="/news"
+        element={
+            <NewsPage />
+        }
+      />
+      <Route
+        path="/admin/news"
+        element={
+            <AdminNewsPage />
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+            <ProfilePage />
+        }
+      />
+      <Route
+        path="/admin/profile"
+        element={
+            <AdminProfilePage />
         }
       />
       <Route
@@ -42,14 +69,6 @@ export default function App() {
         element={
           <ProtectedRoute>
             <FeedbackPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/news"
-        element={
-          <ProtectedRoute>
-            <NewsPage />
           </ProtectedRoute>
         }
       />
