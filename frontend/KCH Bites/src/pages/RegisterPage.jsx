@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser, registerUser, setAuthToken } from "../services/auth";
+import { registerUser } from "../services/auth";
 import "../styles/RegisterPage.css";
 
 export default function Register() {
@@ -12,6 +12,7 @@ export default function Register() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -34,20 +35,26 @@ export default function Register() {
 
     try {
       setError("");
+      setSuccess("");
       setLoading(true);
 
       await registerUser({
         username: form.username.trim(),
+        email: form.email.trim(),
         password: form.password,
       });
 
-      const loginResponse = await loginUser({
-        username: form.username.trim(),
-        password: form.password,
+      setSuccess("Registration successful. Redirecting to login...");
+      setForm({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
       });
 
-      setAuthToken(loginResponse.token);
-      navigate("/main", { replace: true });
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 1200);
     } catch (err) {
       setError(err.message || "Registration failed");
     } finally {
@@ -89,6 +96,7 @@ export default function Register() {
           <p className="subtitle">Join and discover amazing food</p>
 
           {error && <div className="error">{error}</div>}
+          {success && <div className="success">{success}</div>}
 
           <form onSubmit={handleSubmit}>
             <input

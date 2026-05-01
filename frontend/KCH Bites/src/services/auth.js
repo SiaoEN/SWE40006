@@ -16,10 +16,10 @@ export function isLoggedIn() {
   return Boolean(getAuthToken());
 }
 
-export async function registerUser({ username, password }) {
+export async function registerUser({ username, email, password }) {
   return requestJson("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, email, password }),
   });
 }
 

@@ -15,12 +15,12 @@ export default function FoodWheel() {
   const [rotation, setRotation] = useState(0);
   const [selected, setSelected] = useState("");
   const [spinning, setSpinning] = useState(false);
+  const segmentAngle = 360 / foods.length;
 
   const spinWheel = () => {
     if (spinning) return;
 
     const randomIndex = Math.floor(Math.random() * foods.length);
-    const segmentAngle = 360 / foods.length;
     const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
     const angle = rotation + 360 * 5 + (360 - targetAngle);
 
@@ -80,10 +80,18 @@ export default function FoodWheel() {
                       key={food.label}
                       className="slice"
                       style={{
-                        transform: `rotate(${i * (360 / foods.length)}deg)`,
+                        transform: `rotate(${i * segmentAngle}deg)`,
                       }}
                     >
-                      <span className="slice-label">{food.label}</span>
+                      <span
+                        className="slice-label"
+                        style={{
+                          "--slice-angle": `${segmentAngle / 2}deg`,
+                          "--label-distance": `clamp(72px, 16vw, 108px)`,
+                        }}
+                      >
+                        <span className="slice-label-text">{food.label}</span>
+                      </span>
                     </div>
                   ))}
 
