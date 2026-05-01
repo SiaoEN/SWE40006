@@ -2,6 +2,14 @@ const { MongoClient } = require("mongodb");
 
 let client;
 
+function getDb() {
+  if (!client) {
+    throw new Error("Database client is not initialized. Call connectDB() first.");
+  }
+
+  return client.db(process.env.MONGODB_DB_NAME || "KCHBites");
+}
+
 function shouldTryFallback(err) {
   const dnsSrvCodes = ["ECONNREFUSED", "ENOTFOUND", "ETIMEOUT", "ESERVFAIL"];
   return dnsSrvCodes.includes(err?.code);
@@ -44,4 +52,4 @@ async function connectDB() {
   }
 }
 
-module.exports = { connectDB, client };
+module.exports = { connectDB, getDb };
