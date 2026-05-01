@@ -18,9 +18,7 @@ export default function App() {
       <Route
         path="/main"
         element={
-          <ProtectedRoute>
             <MainPage />
-          </ProtectedRoute>
         }
       />
       <Route
