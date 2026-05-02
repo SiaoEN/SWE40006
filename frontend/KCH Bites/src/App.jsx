@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MainPage from "./pages/MainPage";
+import AdminMain from "./pages/AdminMain";
 import CommunityPage from "./pages/CommunityPage";
 import CommunityPageAdmin from "./pages/CommunityPageAdmin";
 import FeedbackPage from "./pages/FeedbackPage";
@@ -94,6 +95,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RestaurantPageAdmin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/main"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminMain />
           </ProtectedRoute>
         }
       />

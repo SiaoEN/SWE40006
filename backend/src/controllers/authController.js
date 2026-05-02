@@ -76,7 +76,7 @@ exports.login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id.toString(), username: user.name },
+      { userId: user._id.toString(), username: user.name, role: user.role },
       jwtSecret,
       { expiresIn: jwtExpiresIn }
     );

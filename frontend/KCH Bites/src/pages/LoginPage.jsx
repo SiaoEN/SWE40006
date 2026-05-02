@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser, setAuthToken } from "../services/auth";
+import { loginUser, setAuthToken, isAdmin } from "../services/auth";
 import "../styles/LoginPage.css";
 
 export default function LoginPage() {
@@ -35,7 +35,10 @@ export default function LoginPage() {
       });
 
       setAuthToken(data.token);
-      navigate("/main", { replace: true });
+      
+      // Redirect to admin main if admin, otherwise redirect to user main
+      const redirectPath = isAdmin() ? "/admin/main" : "/main";
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
