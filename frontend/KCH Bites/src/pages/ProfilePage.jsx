@@ -76,6 +76,20 @@ export default function ProfilePage() {
     });
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({
+          ...formData,
+          avatar: reader.result, // Store as data URL
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = () => {
     const passwordChangeRequested =
       formData.oldPassword || formData.newPassword || formData.confirmNewPassword;
@@ -272,13 +286,26 @@ export default function ProfilePage() {
               onChange={handleChange}
             />
 
-            <label>Profile Image URL</label>
-            <input
-              type="text"
-              name="avatar"
-              value={formData.avatar}
-              onChange={handleChange}
-            />
+            <label>Profile Image</label>
+            <div className="image-input-row">
+              <input
+                type="text"
+                name="avatar"
+                placeholder="Enter image URL"
+                value={formData.avatar}
+                onChange={handleChange}
+                className="url-input"
+              />
+              <label className="file-upload-label-small">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="file-input"
+                />
+                <span>Choose Image</span>
+              </label>
+            </div>
 
             <div className="modal-actions">
               <button
