@@ -1,4 +1,4 @@
-const { getClient } = require("../../config/db");
+const { getClient, getExistingCollection } = require("../../config/db");
 
 const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
 
@@ -36,7 +36,7 @@ exports.createRestaurant = async (req, res) => {
     }
 
     const db = getDb();
-    const restaurants = db.collection("restaurants");
+    const restaurants = await getExistingCollection("Restaurant");
 
     const doc = {
       name,
@@ -87,7 +87,7 @@ exports.createRestaurant = async (req, res) => {
 exports.getAllRestaurants = async (req, res) => {
   try {
     const db = getDb();
-    const restaurants = db.collection("restaurants");
+    const restaurants = await getExistingCollection("Restaurant");
 
     const { near, radius, limit, page } = req.query;
 
@@ -134,7 +134,7 @@ exports.getRestaurantById = async (req, res) => {
     }
 
     const db = getDb();
-    const restaurants = db.collection("restaurants");
+    const restaurants = await getExistingCollection("Restaurant");
     const doc = await restaurants.findOne({ _id: new ObjectId(id) });
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
     res.status(200).json({ success: true, restaurant: doc });
@@ -154,7 +154,7 @@ exports.updateRestaurant = async (req, res) => {
     const { name, address, description, tags, photos, operatingHours, lat, lng } = req.body;
 
     const db = getDb();
-    const restaurants = db.collection("restaurants");
+    const restaurants = await getExistingCollection("Restaurant");
 
     const updateData = { updatedAt: new Date() };
 
@@ -208,7 +208,7 @@ exports.deleteRestaurant = async (req, res) => {
     }
 
     const db = getDb();
-    const restaurants = db.collection("restaurants");
+    const restaurants = await getExistingCollection("Restaurant");
 
     const result = await restaurants.deleteOne({ _id: new ObjectId(id) });
 

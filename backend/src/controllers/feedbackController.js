@@ -1,4 +1,4 @@
-const { getClient } = require("../../config/db");
+const { getClient, getExistingCollection } = require("../../config/db");
 const { ObjectId } = require("mongodb");
 
 const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
@@ -63,11 +63,12 @@ exports.submitFeedback = async (req, res) => {
     };
 
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
     const result = await coll.insertOne(doc);
 
     res.status(201).json({ success: true, message: "Feedback submitted successfully", feedback: { _id: result.insertedId, ...doc } });
   } catch (error) {
+    console.error("[feedbackController] submitFeedback error:", error);
     res.status(500).json({ success: false, message: "Error submitting feedback", error: error.message });
   }
 };
@@ -82,7 +83,7 @@ exports.getUserFeedback = async (req, res) => {
     }
 
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
 
     // Support fetching by username as well as by userId value
     const queryByUsername = { username: userId };
@@ -105,7 +106,7 @@ exports.getFeedbackByUsername = async (req, res) => {
     if (!username) return res.status(400).json({ success: false, message: "Username is required" });
 
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
     const items = await coll.find({ username }).sort({ createdAt: -1 }).toArray();
     res.status(200).json({ success: true, feedback: items });
   } catch (error) {
@@ -117,7 +118,7 @@ exports.getFeedbackByUsername = async (req, res) => {
 exports.getAllFeedback = async (req, res) => {
   try {
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
     const items = await coll.find({}).sort({ createdAt: -1 }).toArray();
     res.status(200).json({ success: true, feedback: items });
   } catch (error) {
@@ -138,7 +139,7 @@ exports.updateFeedbackStatus = async (req, res) => {
     }
 
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
 
     if (!ObjectId.isValid(feedbackId)) {
       return res.status(400).json({ success: false, message: "Invalid feedback id" });
@@ -181,7 +182,7 @@ exports.editFeedback = async (req, res) => {
     const { message, rating, type } = req.body;
 
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
 
     const update = { $set: {} };
     if (message !== undefined) update.$set.message = message;
@@ -214,7 +215,7 @@ exports.deleteFeedback = async (req, res) => {
   try {
     const { feedbackId } = req.params;
     const db = getDb();
-    const coll = db.collection("feedbacks");
+    const coll = await getExistingCollection("Feedback");
 
     let resp;
     if (ObjectId.isValid(feedbackId)) {

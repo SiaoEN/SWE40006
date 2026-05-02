@@ -1,4 +1,4 @@
-const { getClient } = require("../../config/db");
+const { getClient, getExistingCollection } = require("../../config/db");
 const { ObjectId } = require("mongodb");
 
 const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
@@ -49,7 +49,7 @@ exports.submitReview = async (req, res) => {
       : [];
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
 
     const doc = {
       userId,
@@ -77,7 +77,7 @@ exports.submitReview = async (req, res) => {
 exports.getAllReviews = async (req, res) => {
   try {
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
     const items = await coll.find({}).sort({ createdAt: -1 }).toArray();
     res.status(200).json({ success: true, reviews: items });
   } catch (error) {
@@ -90,7 +90,7 @@ exports.getReviewsByRestaurant = async (req, res) => {
   try {
     const { restaurantId } = req.params;
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
     const items = await coll.find({ restaurantId }).sort({ createdAt: -1 }).toArray();
     res.status(200).json({ success: true, reviews: items });
   } catch (error) {
@@ -107,7 +107,7 @@ exports.likeReview = async (req, res) => {
     if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
@@ -135,7 +135,7 @@ exports.dislikeReview = async (req, res) => {
     if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
@@ -163,7 +163,7 @@ exports.reportReview = async (req, res) => {
     if (!userId || !reason) return res.status(400).json({ success: false, message: "User ID and reason are required" });
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("reviews");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
@@ -194,7 +194,7 @@ exports.deleteReview = async (req, res) => {
     const { userId, isAdmin } = req.body;
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("reviews");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
@@ -222,7 +222,7 @@ exports.clearReports = async (req, res) => {
     if (!adminFlag) return res.status(403).json({ success: false, message: "Only admins can clear reports" });
 
     const db = getDb();
-    const coll = db.collection("reviews");
+    const coll = await getExistingCollection("Review");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 

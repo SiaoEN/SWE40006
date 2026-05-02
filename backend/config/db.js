@@ -10,6 +10,25 @@ function getDb() {
   return client.db(process.env.MONGODB_DB_NAME || "KCHBites");
 }
 
+function getClient() {
+  if (!client) {
+    throw new Error("Database client is not initialized. Call connectDB() first.");
+  }
+  return client;
+}
+
+async function getExistingCollection(collectionName) {
+  const db = getDb();
+  const collections = await db.listCollections().toArray();
+  const exists = collections.some((c) => c.name === collectionName);
+  
+  if (!exists) {
+    throw new Error(`Collection "${collectionName}" does not exist in the database. Please create it first.`);
+  }
+  
+  return db.collection(collectionName);
+}
+
 function shouldTryFallback(err) {
   const dnsSrvCodes = ["ECONNREFUSED", "ENOTFOUND", "ETIMEOUT", "ESERVFAIL"];
   return dnsSrvCodes.includes(err?.code);
@@ -52,4 +71,4 @@ async function connectDB() {
   }
 }
 
-module.exports = { connectDB, getDb };
+module.exports = { connectDB, getDb, getClient, getExistingCollection };
