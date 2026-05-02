@@ -3,10 +3,13 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MainPage from "./pages/MainPage";
 import CommunityPage from "./pages/CommunityPage";
-import EditProfilePage from "./pages/EditProfilePage";
+import CommunityPageAdmin from "./pages/CommunityPageAdmin";
 import FeedbackPage from "./pages/FeedbackPage";
+import FeedbackPageAdmin from "./pages/FeedbackPageAdmin";
 import NewsPage from "./pages/NewsPage";
 import AdminNewsPage from "./pages/AdminNewsPage";
+import RestaurantPage from "./pages/RestaurantPage";
+import RestaurantPageAdmin from "./pages/RestaurantPageAdmin";
 import ProfilePage from "./pages/ProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -14,7 +17,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/main" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -33,7 +36,9 @@ export default function App() {
       <Route
         path="/admin/news"
         element={
+          <ProtectedRoute>
             <AdminNewsPage />
+          </ProtectedRoute>
         }
       />
       <Route
@@ -45,34 +50,53 @@ export default function App() {
       <Route
         path="/admin/profile"
         element={
+          <ProtectedRoute>
             <AdminProfilePage />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/community"
         element={
-          <ProtectedRoute>
             <CommunityPage />
-          </ProtectedRoute>
         }
       />
       <Route
-        path="/edit-profile"
+        path="/admin/community"
         element={
           <ProtectedRoute>
-            <EditProfilePage />
+            <CommunityPageAdmin />
           </ProtectedRoute>
         }
       />
       <Route
         path="/feedback"
         element={
-          <ProtectedRoute>
             <FeedbackPage />
+        }
+      />
+      <Route
+        path="/admin/feedback"
+        element={
+          <ProtectedRoute>
+            <FeedbackPageAdmin />
           </ProtectedRoute>
         }
       />
-
+       <Route
+        path="/restaurant/:restaurantId"
+        element={
+        <RestaurantPage />
+      }
+      />
+      <Route
+        path="/admin/restaurant"
+        element={
+          <ProtectedRoute>
+            <RestaurantPageAdmin />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

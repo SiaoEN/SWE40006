@@ -1,16 +1,29 @@
-const reviewData = []; // Temporary storage - replace with DB later
+const { getClient } = require("../../config/db");
+const { ObjectId } = require("mongodb");
+
+const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
+
+function getDb() {
+  const client = getClient();
+  return client.db(DB_NAME);
+}
+
+function unwrapFindOneAndUpdateResult(result) {
+  if (!result) return null;
+  if (Object.prototype.hasOwnProperty.call(result, "value")) {
+    return result.value;
+  }
+  return result;
+}
 
 // Submit restaurant review
-exports.submitReview = (req, res) => {
+exports.submitReview = async (req, res) => {
   try {
     const { userId, username, restaurantId, restaurantName, rating, comment } = req.body;
     const parsedRating = Number(rating);
 
-    if (!userId || !restaurantId || !comment) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID, restaurant ID, and comment are required",
-      });
+    if (!restaurantId || !comment) {
+      return res.status(400).json({ success: false, message: "Restaurant ID and comment are required" });
     }
 
     if (
@@ -21,10 +34,7 @@ exports.submitReview = (req, res) => {
       parsedRating < 1 ||
       parsedRating > 5
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be a number between 1 and 5",
-      });
+      return res.status(400).json({ success: false, message: "Rating must be a number between 1 and 5" });
     }
 
     // Handle uploaded files
@@ -38,8 +48,10 @@ exports.submitReview = (req, res) => {
         }))
       : [];
 
-    const review = {
-      id: Date.now().toString(),
+    const db = getDb();
+    const coll = db.collection("reviews");
+
+    const doc = {
       userId,
       username: username || "Anonymous",
       restaurantId,
@@ -47,268 +59,180 @@ exports.submitReview = (req, res) => {
       rating: parsedRating,
       comment,
       attachments,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(),
       likes: [],
       dislikes: [],
       reports: [],
     };
 
-    reviewData.push(review);
+    const result = await coll.insertOne(doc);
 
-    res.status(201).json({
-      success: true,
-      message: "Review submitted successfully",
-      review,
-    });
+    res.status(201).json({ success: true, message: "Review submitted successfully", review: { _id: result.insertedId, ...doc } });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error submitting review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error submitting review", error: error.message });
   }
 };
 
 // Get all reviews
-exports.getAllReviews = (req, res) => {
+exports.getAllReviews = async (req, res) => {
   try {
-    res.status(200).json({
-      success: true,
-      reviews: reviewData,
-    });
+    const db = getDb();
+    const coll = db.collection("reviews");
+    const items = await coll.find({}).sort({ createdAt: -1 }).toArray();
+    res.status(200).json({ success: true, reviews: items });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching reviews",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error fetching reviews", error: error.message });
   }
 };
 
 // Get reviews by restaurant
-exports.getReviewsByRestaurant = (req, res) => {
+exports.getReviewsByRestaurant = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-    const restaurantReviews = reviewData.filter((r) => r.restaurantId === restaurantId);
-
-    res.status(200).json({
-      success: true,
-      reviews: restaurantReviews,
-    });
+    const db = getDb();
+    const coll = db.collection("reviews");
+    const items = await coll.find({ restaurantId }).sort({ createdAt: -1 }).toArray();
+    res.status(200).json({ success: true, reviews: items });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching reviews",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error fetching reviews", error: error.message });
   }
 };
 
 // Like a review
-exports.likeReview = (req, res) => {
+exports.likeReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { userId } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required",
-      });
-    }
+    if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
-    const review = reviewData.find((r) => r.id === reviewId);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found",
-      });
-    }
+    const db = getDb();
+    const coll = db.collection("reviews");
 
-    // Remove from dislikes if present
-    review.dislikes = review.dislikes.filter((id) => id !== userId);
+    if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
-    // Add to likes if not already there
-    if (!review.likes.includes(userId)) {
-      review.likes.push(userId);
-    }
+    const resp = await coll.findOneAndUpdate(
+      { _id: new ObjectId(reviewId) },
+      { $addToSet: { likes: userId }, $pull: { dislikes: userId } },
+      { returnDocument: "after" }
+    );
 
-    res.status(200).json({
-      success: true,
-      message: "Review liked",
-      review,
-    });
+    const updated = unwrapFindOneAndUpdateResult(resp);
+    if (!updated) return res.status(404).json({ success: false, message: "Review not found" });
+
+    res.status(200).json({ success: true, message: "Review liked", review: updated });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error liking review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error liking review", error: error.message });
   }
 };
 
 // Dislike a review
-exports.dislikeReview = (req, res) => {
+exports.dislikeReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { userId } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required",
-      });
-    }
+    if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
-    const review = reviewData.find((r) => r.id === reviewId);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found",
-      });
-    }
+    const db = getDb();
+    const coll = db.collection("reviews");
 
-    // Remove from likes if present
-    review.likes = review.likes.filter((id) => id !== userId);
+    if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
-    // Add to dislikes if not already there
-    if (!review.dislikes.includes(userId)) {
-      review.dislikes.push(userId);
-    }
+    const resp = await coll.findOneAndUpdate(
+      { _id: new ObjectId(reviewId) },
+      { $addToSet: { dislikes: userId }, $pull: { likes: userId } },
+      { returnDocument: "after" }
+    );
 
-    res.status(200).json({
-      success: true,
-      message: "Review disliked",
-      review,
-    });
+    const updated = unwrapFindOneAndUpdateResult(resp);
+    if (!updated) return res.status(404).json({ success: false, message: "Review not found" });
+
+    res.status(200).json({ success: true, message: "Review disliked", review: updated });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error disliking review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error disliking review", error: error.message });
   }
 };
 
 // Report a review
-exports.reportReview = (req, res) => {
+exports.reportReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { userId, reason } = req.body;
 
-    if (!userId || !reason) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID and reason are required",
-      });
-    }
+    if (!userId || !reason) return res.status(400).json({ success: false, message: "User ID and reason are required" });
 
-    const review = reviewData.find((r) => r.id === reviewId);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found",
-      });
-    }
+    const db = getDb();
+    const coll = db.collection("reviews");
 
-    if (review.userId === userId) {
-      return res.status(403).json({
-        success: false,
-        message: "You cannot report your own review",
-      });
-    }
+    if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
-    // Check if user already reported this review
-    const existingReport = review.reports.find((r) => r.userId === userId);
-    if (existingReport) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already reported this review",
-      });
-    }
+    const existing = await coll.findOne({ _id: new ObjectId(reviewId) });
+    if (!existing) return res.status(404).json({ success: false, message: "Review not found" });
+    if (existing.userId === userId) return res.status(403).json({ success: false, message: "You cannot report your own review" });
 
-    review.reports.push({
-      userId,
-      reason,
-      reportedAt: new Date().toISOString(),
-    });
+    const already = (existing.reports || []).some((r) => r.userId === userId);
+    if (already) return res.status(400).json({ success: false, message: "You have already reported this review" });
 
-    res.status(200).json({
-      success: true,
-      message: "Review reported successfully",
-      review,
-    });
+    const resp = await coll.findOneAndUpdate(
+      { _id: new ObjectId(reviewId) },
+      { $push: { reports: { userId, reason, reportedAt: new Date() } } },
+      { returnDocument: "after" }
+    );
+
+    const updated = unwrapFindOneAndUpdateResult(resp);
+    res.status(200).json({ success: true, message: "Review reported successfully", review: updated });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error reporting review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error reporting review", error: error.message });
   }
 };
 
 // Delete a review (user own review only, admin override allowed)
-exports.deleteReview = (req, res) => {
+exports.deleteReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { userId, isAdmin } = req.body;
 
-    const review = reviewData.find((r) => r.id === reviewId);
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found",
-      });
-    }
+    const db = getDb();
+    const coll = db.collection("reviews");
 
-    // Allow deletion if owner or if request indicates admin privilege
-    const adminFlag = isAdmin === true || isAdmin === 'true';
-    if (review.userId !== userId && !adminFlag) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only delete your own reviews",
-      });
-    }
+    if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
-    const index = reviewData.indexOf(review);
-    reviewData.splice(index, 1);
+    const existing = await coll.findOne({ _id: new ObjectId(reviewId) });
+    if (!existing) return res.status(404).json({ success: false, message: "Review not found" });
 
-    res.status(200).json({
-      success: true,
-      message: "Review deleted successfully",
-    });
+    const adminFlag = isAdmin === true || isAdmin === "true";
+    if (existing.userId !== userId && !adminFlag) return res.status(403).json({ success: false, message: "You can only delete your own reviews" });
+
+    await coll.deleteOne({ _id: new ObjectId(reviewId) });
+
+    res.status(200).json({ success: true, message: "Review deleted successfully" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error deleting review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error deleting review", error: error.message });
   }
 };
 
 // Clear reports for a review (admin only)
-exports.clearReports = (req, res) => {
+exports.clearReports = async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { isAdmin } = req.body;
 
-    const adminFlag = isAdmin === true || isAdmin === 'true';
-    if (!adminFlag) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can clear reports',
-      });
-    }
+    const adminFlag = isAdmin === true || isAdmin === "true";
+    if (!adminFlag) return res.status(403).json({ success: false, message: "Only admins can clear reports" });
 
-    const review = reviewData.find((r) => r.id === reviewId);
-    if (!review) {
-      return res.status(404).json({ success: false, message: 'Review not found' });
-    }
+    const db = getDb();
+    const coll = db.collection("reviews");
 
-    review.reports = [];
+    if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
-    res.status(200).json({ success: true, message: 'Reports cleared', review });
+    const resp = await coll.findOneAndUpdate({ _id: new ObjectId(reviewId) }, { $set: { reports: [] } }, { returnDocument: "after" });
+
+    const updated = unwrapFindOneAndUpdateResult(resp);
+    if (!updated) return res.status(404).json({ success: false, message: "Review not found" });
+
+    res.status(200).json({ success: true, message: "Reports cleared", review: updated });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error clearing reports', error: error.message });
+    res.status(500).json({ success: false, message: "Error clearing reports", error: error.message });
   }
 };

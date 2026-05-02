@@ -1,0 +1,412 @@
+/* Admin-specific Community Page styles (extracted from CommunityPage.css) */
+
+.community-hero {
+	width: 100%;
+	max-width: auto;
+	margin: 0 auto;
+	box-sizing: border-box;
+	background: linear-gradient(135deg, rgba(255, 122, 0, 0.8) 0%, rgba(229, 57, 53, 0.8) 100%),
+		url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400"><defs><pattern id="pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="1200" height="400" fill="%23FFF3E0"/><rect width="1200" height="400" fill="url(%23pattern)"/></svg>');
+	background-size: cover;
+	background-position: center;
+	padding: 80px 20px;
+	text-align: center;
+	border-radius: 0;
+	margin: 0;
+    position: relative;
+}
+
+.community-hero .hero-content h1 {
+	margin: 0 0 15px 0;
+	color: white;
+	font-size: 3.5rem;
+	font-weight: 700;
+	text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.community-hero .hero-content p {
+	margin: 0;
+	color: rgba(255, 255, 255, 0.95);
+	font-size: 1.3rem;
+	font-weight: 500;
+	text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+	padding-top: 20px;
+}
+
+.hero-back-btn {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hero-back-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 12px 22px rgba(0, 0, 0, 0.16);
+}
+
+.hero-back-btn:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+}
+
+.community-container {
+	max-width: auto;
+	margin: 0 auto;
+	padding: 40px 20px;
+	background-color: #FFF3E0;
+	min-height: calc(100vh - 200px);
+	width: 100%;
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	background-color: #FFF3E0;
+}
+
+/* Alerts */
+.alert {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background-color: #c8e6c9;
+    color: #2e7d32;
+    border-left: 4px solid #4caf50;
+}
+
+.alert-error {
+    background-color: #ffcdd2;
+    color: #c62828;
+    border-left: 4px solid #E53935;
+}
+
+/* Reviews List */
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.review-filter-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.review-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(78, 52, 46, 0.12);
+    background: #fffaf5;
+    color: #4E342E;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.review-filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(78, 52, 46, 0.12);
+}
+
+.review-filter-btn.active {
+    background: linear-gradient(135deg, #FF7A00, #E53935);
+    color: white;
+    border-color: transparent;
+}
+
+.review-filter-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.review-filter-count {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(78, 52, 46, 0.08);
+    color: inherit;
+    font-size: 0.85rem;
+}
+
+.review-filter-btn.active .review-filter-count {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.review-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%);
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 6px solid #FF7A00;
+    box-shadow: 0 2px 8px rgba(78, 52, 46, 0.08);
+}
+
+.review-card--reported {
+    border-left-color: #E53935;
+    box-shadow: 0 6px 18px rgba(229, 57, 53, 0.16);
+    background: linear-gradient(180deg, #fff8f8 0%, #fff4f4 100%);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(78, 52, 46, 0.06);
+}
+
+.review-user-info {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.review-alert-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #E53935;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 4px rgba(229, 57, 53, 0.14);
+}
+
+.review-user-info strong {
+    color: #4E342E;
+}
+
+.review-actions-menu {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-report,
+.btn-delete {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-report {
+    background-color: rgba(255, 122, 0, 0.12);
+    color: #b35f00;
+}
+
+.btn-delete {
+    background-color: rgba(229, 57, 53, 0.12);
+    color: #b3261e;
+}
+
+.review-rating {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.rating-star {
+    color: #FF7A00;
+}
+
+.review-comment {
+    margin: 12px 0;
+    color: #4E342E;
+    line-height: 1.6;
+}
+
+.review-restaurant {
+    margin: 10px 0 6px;
+    color: #6b4a3f;
+    font-weight: 500;
+}
+
+.review-attachments {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 12px 0;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border-left: 3px solid #FFD8B3;
+}
+
+.review-photo {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Lightbox (shared with community page) */
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.lightbox-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.lightbox-image {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 12px;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -25px;
+    right: -25px;
+    width: 46px;
+    height: 46px;
+    background: #E53935;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    color: white;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.lightbox-close:hover {
+    background: #ff4d45;
+    transform: scale(1.1);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.0rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.lightbox-nav-prev {
+    left: -72px;
+}
+
+.lightbox-nav-next {
+    right: -72px;
+}
+
+.lightbox-counter {
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    font-weight: 600;
+}
+
+/* Responsive tweaks */
+@media (max-width:768px) {
+    .community-hero .hero-content h1 {
+        font-size: 1.8rem;
+    }
+
+    .review-filter-bar {
+        gap: 10px;
+    }
+
+    .review-filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .review-photo {
+        max-height: 300px;
+    }
+
+    .lightbox-nav {
+        width: 42px;
+        height: 42px;
+        font-size: 1.5rem;
+    }
+
+    .lightbox-nav-prev {
+        left: -14px;
+    }
+
+    .lightbox-nav-next {
+        right: -14px;
+    }
+
+    .lightbox-close {
+        top: -25px;
+        right: -25px;
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+}

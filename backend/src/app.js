@@ -45,11 +45,27 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
-// Middleware for feedback file uploads
-app.use("/api/feedback", upload.array("attachments", 5));
+const feedbackController = require("./controllers/feedbackController");
+const reviewController = require("./controllers/reviewController");
 
-// Middleware for review file uploads
-app.use("/api/reviews", upload.array("attachments", 5));
+// Explicit routes for feedback and reviews to avoid path-mount issues on the shared API router.
+app.post("/api/feedback", upload.array("attachments", 5), feedbackController.submitFeedback);
+app.get("/api/feedback/user/:userId", feedbackController.getUserFeedback);
+app.get("/api/feedback/username/:username", feedbackController.getFeedbackByUsername);
+app.get("/api/feedback", feedbackController.getAllFeedback);
+app.put("/api/feedback/:feedbackId/status", feedbackController.updateFeedbackStatus);
+app.put("/api/feedback/:feedbackId", feedbackController.editFeedback);
+app.delete("/api/feedback/:feedbackId", feedbackController.deleteFeedback);
+app.get("/api/feedback/download/:filename", feedbackController.downloadFile);
+
+app.post("/api/reviews", upload.array("attachments", 5), reviewController.submitReview);
+app.get("/api/reviews", reviewController.getAllReviews);
+app.get("/api/reviews/restaurant/:restaurantId", reviewController.getReviewsByRestaurant);
+app.post("/api/reviews/:reviewId/like", reviewController.likeReview);
+app.post("/api/reviews/:reviewId/dislike", reviewController.dislikeReview);
+app.post("/api/reviews/:reviewId/report", reviewController.reportReview);
+app.delete("/api/reviews/:reviewId", reviewController.deleteReview);
+app.post("/api/reviews/:reviewId/clear-reports", reviewController.clearReports);
 
 app.get("/", (_req, res) => {
   res.status(200).json({
