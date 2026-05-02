@@ -5,6 +5,7 @@ const path = require("path");
 const healthController = require("../controllers/healthController");
 const authRoutes = require("./authRoutes");
 const newsRoutes = require("./newsRoutes");
+const locationRoutes = require("./locationRoutes");
 const feedbackController = require("../controllers/feedbackController");
 const reviewController = require("../controllers/reviewController");
 const restaurantController = require("../controllers/restaurantController");
@@ -39,7 +40,7 @@ const upload = multer({
 router.get("/health", healthController.getHealth);
 router.use("/auth", authRoutes);
 router.use("/news", newsRoutes);
-
+router.use("/location", locationRoutes);
 // Feedback routes
 router.post("/feedback", upload.array("attachments", 5), feedbackController.submitFeedback);
 router.get("/feedback/user/:userId", feedbackController.getUserFeedback);
