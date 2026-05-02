@@ -1,7 +1,11 @@
 import '../styles/ProfilePage.css';
 import { useState } from 'react';
+import Header from "../components/Header";
+import Sidebar from '../components/Sidebar';
+import Footer from "../components/Footer";
 
 export default function AdminProfilePage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [admin, setAdmin] = useState({
     username: 'Admin User',
@@ -38,9 +42,33 @@ export default function AdminProfilePage() {
     setIsEditing(false);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
+
+  const menuItems = [
+    { label: 'Profile', to: '/profile' }
+  ];
+
   return (
     <main className="profile-page admin-profile-page">
-      <div className="profile-header admin-profile-header">
+      {/* HEADER */}
+      <Header
+        title="Profile"
+        subtitle="View and edit your profile information, reviews, and favorites."
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
+
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        handleLogout={handleLogout}
+        menuItems={menuItems}
+      />
+      <div className="admin-profile-header">
         <img src={admin.avatar} alt="admin avatar" className="avatar" />
         <h2 className="username">{admin.username}</h2>
 
@@ -81,6 +109,7 @@ export default function AdminProfilePage() {
           </div>
         </div>
       )}
+      <Footer />
     </main>
   );
 }

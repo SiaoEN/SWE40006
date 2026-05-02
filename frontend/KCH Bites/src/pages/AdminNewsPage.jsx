@@ -1,6 +1,9 @@
 import '../styles/NewsPage.css';
 import { useEffect, useState } from 'react';
 import { requestJson } from '../services/api';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 function createSection(type = 'paragraph') {
   return {
@@ -153,6 +156,7 @@ const formatPostTimestamp = (date = new Date()) => {
 };
 
 export default function AdminNewsPage() {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [newsItems, setNewsItems] = useState([]);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -447,14 +451,32 @@ export default function AdminNewsPage() {
     })();
   };
 
+  const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	}
+
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' }
+	];
+
   return (
     <main className="news-page admin-news-page">
-      <div className="news-hero admin-hero">
-        <h2 className="news-title">Manage News</h2>
-        <p className="subtitle">
-          Create new posts, update existing ones, or remove outdated news.
-        </p>
-      </div>
+      {/* HEADER */}
+      <Header
+        title="Manage News"
+        subtitle="Create new posts, update existing ones, or remove outdated news."
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
+
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        handleLogout={handleLogout}
+        menuItems={menuItems}
+      />
 
       <section className="admin-panel">
         <h3>{editingItemId ? 'Edit News Post' : 'Post News'}</h3>
@@ -636,6 +658,7 @@ export default function AdminNewsPage() {
           </article>
         ))}
       </div>
+      <Footer />
     </main>
   );
 }

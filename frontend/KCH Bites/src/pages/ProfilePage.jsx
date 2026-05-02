@@ -1,7 +1,11 @@
 import '../styles/ProfilePage.css';
 import { useState } from 'react';
+import Header from "../components/Header";
+import Sidebar from '../components/Sidebar';
+import Footer from "../components/Footer";
 
 export default function ProfilePage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('reviews');
   const [isEditing, setIsEditing] = useState(false);
   const [passwordError, setPasswordError] = useState({ field: '', message: '' });
@@ -13,8 +17,8 @@ export default function ProfilePage() {
     avatar: "https://i.ytimg.com/vi/8BYa0U1h5Fs/sddefault.jpg",
     password: "password123",
     stats: {
-      reviews: 12,
-      favorites: 8,
+      reviews: 1,
+      favorites: 5,
       ratings: 4.6,
     },
   });
@@ -143,9 +147,35 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
+
+  const menuItems = [
+    { label: 'Profile', to: '/profile' },
+    { label: 'Feedback', to: '/feedback' },
+    { label: 'Community', to: '/community' },
+    { label: 'Log In / Register', to: '/login' },
+  ];
+
   return (
     <main className="profile-page">
       {/* HEADER */}
+      <Header
+        title="Profile"
+        subtitle="View and edit your profile information, reviews, and favorites."
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
+
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        handleLogout={handleLogout}
+        menuItems={menuItems}
+      />
       <div className="profile-header">
         <img src={user.avatar} alt="avatar" className="avatar" />
         <h2 className="username">{user.username}</h2>
@@ -323,6 +353,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <Footer />
     </main>
   );
 }

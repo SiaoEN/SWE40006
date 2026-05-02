@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import '../styles/NewsPage.css';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 function formatPublishedDate(value) {
   if (!value) {
@@ -84,6 +87,7 @@ function renderSection(section, index) {
 }
 
 export default function NewsPage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [newsItems, setNewsItems] = useState([]);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,14 +132,35 @@ export default function NewsPage() {
     [newsItems]
   );
 
+  const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	}
+
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' },
+		{ label: 'Feedback', to: '/feedback' },
+		{ label: 'Community', to: '/community' },
+		{ label: 'Log In / Register', to: '/login' },
+	];
+
   return (
     <main className="news-page">
-      <div className="news-hero">
-        <h2 className="news-title">Food News in Kuching</h2>
-        <p className="subtitle">
-          Stay updated with the latest restaurant trends and openings.
-        </p>
-      </div>
+      {/* HEADER */}
+      <Header
+        title="Food News in Kuching"
+        subtitle="Stay updated with the latest restaurant trends and openings."
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+      />
+
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        handleLogout={handleLogout}
+        menuItems={menuItems}
+      />
 
       {isLoading && <p className="description">Loading latest news...</p>}
       {errorMessage && <p className="description">{errorMessage}</p>}
@@ -177,6 +202,7 @@ export default function NewsPage() {
           ))}
         </div>
       )}
+      <Footer />
     </main>
   );
 }
