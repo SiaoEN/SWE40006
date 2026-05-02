@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaWalking } from "react-icons/fa";
+import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaUtensils } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
 import "../styles/MainPage.css";
@@ -27,6 +27,12 @@ export default function AdminPage() {
             icon: FaNewspaper,
             description: 'Manage news articles and updates',
         },
+        {
+            id: 'restaurant',
+            title: 'Restaurants',
+            icon: FaUtensils,
+            description: 'Oversee and manage restaurant listings',
+        }
     ];
 
     const handleLogout = () => {

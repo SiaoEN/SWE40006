@@ -251,7 +251,7 @@
     background: rgba(255, 248, 239, 0.82);
     box-shadow: 0 24px 60px rgba(78, 52, 46, 0.12);
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
 }
 
@@ -339,8 +339,7 @@
     width: min(360px, 100%);
     padding: 16px;
     max-height: min(60vh, 480px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
     border-radius: 16px;
     border: 1px solid rgba(78, 52, 46, 0.18);
     background: rgba(255, 243, 224, 0.98);
@@ -348,9 +347,18 @@
     text-align: left;
     color: #4e342e;
     font-size: 0.85rem;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 14px;
     z-index: 20;
+}
+
+.dropdown-body {
+    display: grid;
+    gap: 14px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
 }
 
 .dropdown-menu h5 {
@@ -469,6 +477,7 @@
     gap: 10px;
     justify-content: flex-end;
     flex-wrap: wrap;
+    padding-top: 2px;
 }
 
 .filter-action {
