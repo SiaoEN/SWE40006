@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { FaUserCircle, FaBell } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
 
@@ -27,9 +28,9 @@ export default function Header({ title, subtitle, isSidebarOpen, setIsSidebarOpe
                 <button type="button" className="icon-button header-icon-button" aria-label="Notifications">
                     <FaBell className="bell-icon" />
                 </button>
-                <div className="header-logo-badge" aria-hidden="true">
-                    <img src={logo} alt="" className="header-logo header-logo--badge" />
-                </div>
+                <Link to="/main" className="header-logo-badge" aria-label="Go to main page">
+                    <img src={logo} alt="KCH Bites logo" className="header-logo header-logo--badge" />
+                </Link>
             </div>
         </header>
     );
