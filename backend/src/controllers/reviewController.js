@@ -163,7 +163,7 @@ exports.reportReview = async (req, res) => {
     if (!userId || !reason) return res.status(400).json({ success: false, message: "User ID and reason are required" });
 
     const db = getDb();
-    const coll = await getExistingCollection("reviews");
+  const coll = await getExistingCollection("Review");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
@@ -194,7 +194,7 @@ exports.deleteReview = async (req, res) => {
     const { userId, isAdmin } = req.body;
 
     const db = getDb();
-    const coll = await getExistingCollection("reviews");
+    const coll = await getExistingCollection("Review");
 
     if (!ObjectId.isValid(reviewId)) return res.status(400).json({ success: false, message: "Invalid review id" });
 
