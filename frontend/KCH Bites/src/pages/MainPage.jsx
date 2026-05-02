@@ -7,6 +7,7 @@ import "../styles/LocationBanner.css";
 import FoodWheel from './FoodWheel';
 import { getUserLocation } from '../services/geolocation';
 import { saveUserLocation } from '../services/api';
+import api from '../services/api';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -25,6 +26,9 @@ export default function MainPage() {
 	const [locationLoading, setLocationLoading] = useState(false);
 	const [locationError, setLocationError] = useState(null);
 	const [mapCenter, setMapCenter] = useState([1.5533, 110.3592]);
+	const [restaurants, setRestaurants] = useState([]);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedRestaurant, setSelectedRestaurant] = useState(null);
 
 	// Get user location on component mount
 	useEffect(() => {
@@ -52,6 +56,20 @@ export default function MainPage() {
 		};
 
 		initializeLocation();
+
+		// Fetch restaurants list for searching
+		const fetchRestaurants = async () => {
+			try {
+				const resp = await api.get('/restaurants');
+				if (resp && resp.data && Array.isArray(resp.data.restaurants)) {
+					setRestaurants(resp.data.restaurants);
+				}
+			} catch (err) {
+				console.warn('Failed to fetch restaurants for search:', err.message || err);
+			}
+		};
+
+		fetchRestaurants();
 	}, []);
 
 	const toggleCategory = (category) => {
@@ -98,6 +116,83 @@ export default function MainPage() {
 		window.location.href = "/login";
 	}
 
+	const performSearch = (query) => {
+		if (!query || !restaurants.length) return;
+
+		const normalize = (s) => {
+			return String(s || "")
+				.toLowerCase()
+				.replace(/[^a-z0-9]/g, "");
+		};
+
+		const q = normalize(query);
+		if (!q) return;
+
+		// Find exact normalized name first, then a broader includes match
+		let found = restaurants.find((r) => normalize(r.name || '') === q);
+		if (!found) {
+			found = restaurants.find((r) => {
+				const nameNorm = normalize(r.name || '');
+				if (nameNorm && nameNorm.includes(q)) return true;
+				const addrNorm = normalize(r.address || '');
+				if (addrNorm && addrNorm.includes(q)) return true;
+				if (Array.isArray(r.tags)) {
+					for (const t of r.tags) {
+						if (normalize(t).includes(q)) return true;
+					}
+				}
+				return false;
+			});
+		}
+
+		if (!found) {
+			setSelectedRestaurant(null);
+			return;
+		}
+
+		// helper to extract lat/lng from possible shapes
+		const extractLatLng = (r) => {
+			if (!r) return null;
+			// GeoJSON location: { type: 'Point', coordinates: [lng, lat] }
+			if (r.location && Array.isArray(r.location.coordinates) && r.location.coordinates.length >= 2) {
+				const [a, b] = r.location.coordinates.map(Number);
+				if (Number.isFinite(a) && Number.isFinite(b)) {
+					// try interpret as [lng, lat]
+					const lng = a; const lat = b;
+					if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+					// try reverse [lat, lng]
+					if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return { lat: a, lng: b };
+				}
+			}
+
+			// top-level fields
+			const latKeys = ['lat', 'latitude'];
+			const lngKeys = ['lng', 'lon', 'long', 'longitude'];
+			for (const lk of latKeys) {
+				for (const gk of lngKeys) {
+					if (r[lk] != null && r[gk] != null) {
+						const lat = Number(r[lk]);
+						const lng = Number(r[gk]);
+						if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+					}
+				}
+			}
+
+			return null;
+		};
+
+		const coords = extractLatLng(found);
+		if (coords) {
+			setSelectedRestaurant(found);
+			setMapCenter([Number(coords.lat), Number(coords.lng)]);
+			console.log('performSearch: matched restaurant', found.name, 'coords:', coords);
+		} else {
+			// no usable coordinates found in DB entry
+			setSelectedRestaurant(null);
+			console.warn('Found restaurant but no coordinates present:', found);
+		}
+	}
+
 	const menuItems = [
 		{ label: 'Profile', to: '/profile' },
 		{ label: 'Feedback', to: '/feedback' },
@@ -124,7 +219,22 @@ export default function MainPage() {
 			<main className="page-content">
 				<section className="content-shell">
 					<div className="search-section">
-						<input type="text" placeholder="Search for food..." className="search-input" />
+						<input
+							type="text"
+							placeholder="Search for food or restaurant name..."
+							className="search-input"
+							value={searchQuery}
+							onChange={(e) => {
+								const v = e.target.value;
+								setSearchQuery(v);
+								if (!String(v).trim()) {
+									setSelectedRestaurant(null);
+								}
+							}}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') performSearch(searchQuery);
+							}}
+						/>
 						<button
 							type="button"
 							className="icon-button filter-toggle"
@@ -321,6 +431,33 @@ export default function MainPage() {
 										</div>
 									</Popup>
 								</Marker>
+							)}
+
+							{/* Selected restaurant marker from search */}
+							{selectedRestaurant && selectedRestaurant.location && Array.isArray(selectedRestaurant.location.coordinates) && (
+								(() => {
+									const [lng, lat] = selectedRestaurant.location.coordinates;
+									return (
+										<Marker position={[Number(lat), Number(lng)]}>
+											<Popup>
+												<div className="marker-popup">
+													<strong>{selectedRestaurant.name}</strong>
+													{selectedRestaurant.address && <p>{selectedRestaurant.address}</p>}
+													{(selectedRestaurant.location && Array.isArray(selectedRestaurant.location.coordinates)) && (
+														<p>Lat: {Number(selectedRestaurant.location.coordinates[1]).toFixed(6)}, Lng: {Number(selectedRestaurant.location.coordinates[0]).toFixed(6)}</p>
+													)}
+													{/* fallback top-level fields if present */}
+													{(selectedRestaurant.latitude || selectedRestaurant.lat || selectedRestaurant.lng || selectedRestaurant.longitude) && (
+														<p>
+															Lat: {Number(selectedRestaurant.latitude || selectedRestaurant.lat || selectedRestaurant.latitude || 0).toFixed(6)},
+															Lng: {Number(selectedRestaurant.longitude || selectedRestaurant.lng || selectedRestaurant.long || 0).toFixed(6)}
+														</p>
+													)}
+												</div>
+											</Popup>
+										</Marker>
+									);
+								})()
 							)}
 						</MapContainer>
 					</div>
