@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../services/auth";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 import "../styles/RegisterPage.css";
 
 export default function Register() {
@@ -15,6 +17,7 @@ export default function Register() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -63,9 +66,11 @@ export default function Register() {
   };
 
   return (
-    <div className="register">
-
-      <div className="wrapper">
+    <>
+      <Header title="Create Account" subtitle="Join and discover amazing food" isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      
+      <div className="register">
+        <div className="wrapper">
 
         {/* LEFT PANEL */}
         <div className="left">
@@ -139,7 +144,10 @@ export default function Register() {
           </p>
         </div>
 
+        </div>
       </div>
-    </div>
+      
+      <Footer />
+    </>
   );
 }

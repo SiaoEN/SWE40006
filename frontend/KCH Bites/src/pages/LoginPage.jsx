@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser, setAuthToken, isAdmin } from "../services/auth";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 import "../styles/LoginPage.css";
 
 export default function LoginPage() {
@@ -12,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -47,9 +50,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login">
-
-      <div className="wrapper">
+    <>
+      <Header title="Welcome Back" subtitle="Login to your account" isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      
+      <div className="login">
+        <div className="wrapper">
 
         {/* LEFT PANEL */}
         <div className="left">
@@ -107,7 +112,10 @@ export default function LoginPage() {
           </p>
         </div>
 
+        </div>
       </div>
-    </div>
+      
+      <Footer />
+    </>
   );
 }
