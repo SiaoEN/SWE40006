@@ -34,7 +34,7 @@ export default function MainPage() {
 				const location = await getUserLocation();
 				setUserLocation(location);
 				setMapCenter([location.latitude, location.longitude]);
-				
+
 				// Try to save location to backend
 				try {
 					const userId = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).id : "anonymous";
@@ -76,7 +76,7 @@ export default function MainPage() {
 			const location = await getUserLocation();
 			setUserLocation(location);
 			setMapCenter([location.latitude, location.longitude]);
-			
+
 			// Save location to backend
 			try {
 				const userId = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).id : "anonymous";
@@ -150,6 +150,7 @@ export default function MainPage() {
 						<p className="side-menu-item">Profile</p>
 						<p className="side-menu-item">Feedback</p>
 						<p className="side-menu-item">Community</p>
+						<p className="side-menu-item">Log In / Register</p>
 					</nav>
 				</div>
 
@@ -183,8 +184,8 @@ export default function MainPage() {
 								{locationError && (
 									<div className="location-error-banner">
 										<p className="error-text">{locationError}</p>
-										<button 
-											className="retry-btn" 
+										<button
+											className="retry-btn"
 											onClick={handleUseMyLocation}
 											disabled={locationLoading}
 										>
@@ -199,7 +200,7 @@ export default function MainPage() {
 										<span className="location-text">
 											📍 Your Location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
 										</span>
-										<button 
+										<button
 											className="refresh-location-btn"
 											onClick={handleUseMyLocation}
 											disabled={locationLoading}
@@ -343,10 +344,10 @@ export default function MainPage() {
 								attribution="&copy; OpenStreetMap contributors"
 								url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 							/>
-							
+
 							{/* User Location Marker */}
 							{userLocation && (
-								<Marker 
+								<Marker
 									position={[userLocation.latitude, userLocation.longitude]}
 								>
 									<Popup>

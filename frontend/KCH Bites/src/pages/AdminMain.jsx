@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaWalking } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
+import logoutIcon from "../assets/logout.png";
 import "../styles/MainPage.css";
 
 export default function AdminPage() {
@@ -27,6 +28,12 @@ export default function AdminPage() {
             description: 'Manage news articles and updates',
         },
     ];
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+    }
 
     return (
         <div className="main-page">
@@ -78,13 +85,16 @@ export default function AdminPage() {
                     <h3>Admin</h3>
                 </div>
 
-                <nav className="side-menu">
-                    <p className="side-menu-item">Profile</p>
-                    <p className="side-menu-item">Settings</p>
-                    <p className="side-menu-item">Reports</p>
-                </nav>
+                <div className="side-menu-wrap">
+                    <nav className="side-menu">
+                        <p className="side-menu-item">Profile</p>
+                    </nav>
+                </div>
 
-                <FaWalking className="walking-icon" />
+                <button type="button" className="logout-button" onClick={handleLogout}>
+                    <img src={logoutIcon} alt="Logout" className="logout-icon" />
+                    <span>LogOut</span>
+                </button>
             </aside>
 
             <main className="page-content">

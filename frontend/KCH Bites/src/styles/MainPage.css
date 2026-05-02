@@ -191,7 +191,6 @@
 }
 
 .side-menu-item:hover {
-    transform: translateX(4px);
     background: rgba(255, 243, 224, 0.16);
 }
 
