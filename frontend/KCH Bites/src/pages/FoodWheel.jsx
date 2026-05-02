@@ -22,7 +22,10 @@ export default function FoodWheel() {
 
     const randomIndex = Math.floor(Math.random() * foods.length);
     const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
-    const angle = rotation + 360 * 5 + (360 - targetAngle);
+    const currentRotation = rotation % 360;
+    const spins = 5; // full spins before landing
+    const delta = 360 * spins + ((360 - ((currentRotation + targetAngle) % 360)) % 360);
+    const angle = rotation + delta;
 
     setRotation(angle);
     setSelected("");

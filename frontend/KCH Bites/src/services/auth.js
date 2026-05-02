@@ -29,3 +29,20 @@ export async function loginUser({ username, password }) {
     body: JSON.stringify({ username, password }),
   });
 }
+
+export function getUserRole() {
+  const token = getAuthToken();
+  if (!token) return null;
+  
+  try {
+    // Decode JWT to get user role (payload is second part)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role || null;
+  } catch {
+    return null;
+  }
+}
+
+export function isAdmin() {
+  return getUserRole() === 'admin';
+}
