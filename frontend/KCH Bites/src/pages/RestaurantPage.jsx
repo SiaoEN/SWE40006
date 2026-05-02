@@ -29,11 +29,18 @@ export default function RestaurantPage() {
 	const [lightboxPhotos, setLightboxPhotos] = useState([]);
 	const [lightboxIndex, setLightboxIndex] = useState(0);
 	const [lightboxZoom, setLightboxZoom] = useState(1);
+	const [isFavorite, setIsFavorite] = useState(false);
 	const reviewActionLabel = openedFromAdmin ? "View all reviews" : "Write a Review";
 
 	// Fetch restaurant by ID if not provided via navigation state
 	useEffect(() => {
-		if (location.state?.restaurant) return;
+		if (location.state?.restaurant) {
+			// Load favorite status when restaurant is already provided
+			const resId = location.state.restaurant.id || location.state.restaurant._id;
+			const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+			setIsFavorite(favorites.includes(String(resId)));
+			return;
+		}
 
 		async function fetchRestaurant() {
 			try {
@@ -41,6 +48,10 @@ export default function RestaurantPage() {
 				const response = await api.get(`/restaurants/${restaurantId}`);
 				if (response.data.success) {
 					setRestaurant(response.data.restaurant);
+					// Load favorite status for fetched restaurant
+					const resId = response.data.restaurant.id || response.data.restaurant._id;
+					const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+					setIsFavorite(favorites.includes(String(resId)));
 				} else {
 					setRestaurant(null);
 				}
@@ -100,6 +111,23 @@ export default function RestaurantPage() {
 			lightboxIndex: index,
 		}));
 	}, [restaurantPhotos]);
+
+	const toggleFavorite = () => {
+		const resId = restaurant?.id || restaurant?._id;
+		if (!resId) return;
+		
+		const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+		const index = favorites.indexOf(String(resId));
+		
+		if (index > -1) {
+			favorites.splice(index, 1);
+		} else {
+			favorites.push(String(resId));
+		}
+		
+		localStorage.setItem("favoriteRestaurants", JSON.stringify(favorites));
+		setIsFavorite(!isFavorite);
+	};
 
 	const operatingHoursText = useMemo(() => {
 		if (!restaurant?.operatingHours) {
@@ -373,7 +401,18 @@ export default function RestaurantPage() {
 						{backLabel}
 					</button>
 					<p className="eyebrow">Restaurant details</p>
+				<div className="restaurant-hero-title-row">
 					<h1>{restaurant.name}</h1>
+					<button
+						type="button"
+						className={`btn-favorite ${isFavorite ? "favorited" : ""}`}
+						onClick={toggleFavorite}
+						title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+						aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+					>
+						<span className="heart-icon">{isFavorite ? "❤️" : "🤍"}</span>
+					</button>
+				</div>
 					<p className="hero-description">{restaurant.description || ""}</p>
 					<div className="restaurant-tag-row">
 						{(restaurant.tags || []).map((tag) => (

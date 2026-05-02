@@ -418,6 +418,17 @@ export default function FeedbackPage() {
 											))}
 										</div>
 									)}
+									{feedback.adminResponse && (
+										<div className="feedback-info">
+											<strong>Admin Response:</strong>
+											<p style={{ margin: "8px 0 0 0" }}>{feedback.adminResponse}</p>
+											{feedback.responseDate && (
+												<span style={{ display: "block", marginTop: "8px", fontSize: "0.85rem", opacity: 0.8 }}>
+													Responded on {formatDate(feedback.responseDate)}
+												</span>
+											)}
+										</div>
+									)}
 								</div>
 							))}
 						</div>

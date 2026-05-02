@@ -80,6 +80,23 @@
 	color: #c25d00;
 }
 
+.restaurant-hero-title-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	justify-content: space-between;
+	position: relative;
+	z-index: 1;
+}
+
+.restaurant-hero-title-row h1 {
+	margin: 0;
+	color: #4e342e;
+	font-size: calc(clamp(2.2rem, 4vw, 3.4rem) - 15px);
+	line-height: 1.05;
+	flex: 1;
+}
+
 .restaurant-hero-copy h1,
 .restaurant-review-cta h2,
 .restaurant-map-card h2 {
@@ -87,6 +104,45 @@
 	color: #4e342e;
 	font-size: calc(clamp(2.2rem, 4vw, 3.4rem) - 15px);
 	line-height: 1.05;
+}
+
+.btn-favorite {
+	flex-shrink: 0;
+	background: none;
+	border: none;
+	padding: 12px 14px;
+	cursor: pointer;
+	border-radius: 12px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s ease;
+	background-color: rgba(255, 122, 0, 0.08);
+	border: 1px solid rgba(255, 122, 0, 0.2);
+}
+
+.btn-favorite:hover {
+	background-color: rgba(255, 122, 0, 0.14);
+	border-color: rgba(255, 122, 0, 0.35);
+	transform: scale(1.08);
+}
+
+.btn-favorite.favorited {
+	background-color: rgba(255, 122, 0, 0.18);
+	border-color: #ff7a00;
+}
+
+.btn-favorite.favorited:hover {
+	background-color: rgba(255, 122, 0, 0.25);
+	box-shadow: 0 4px 12px rgba(255, 122, 0, 0.22);
+}
+
+.heart-icon {
+	font-size: 1.6rem;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .hero-description {
