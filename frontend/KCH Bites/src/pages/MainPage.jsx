@@ -98,7 +98,12 @@ export default function MainPage() {
 		window.location.href = "/login";
 	}
 
-	const menuItems = ["Profile", "Feedback", "Community", "Log In / Register"];
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' },
+		{ label: 'Feedback', to: '/feedback' },
+		{ label: 'Community', to: '/community' },
+		{ label: 'Log In / Register', to: '/login' },
+	];
 
 	return (
 		<div className="main-page">

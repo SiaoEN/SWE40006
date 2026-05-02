@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaUtensils } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
+import { useNavigate } from 'react-router-dom';
 import "../styles/MainPage.css";
 
 export default function AdminPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeSection, setActiveSection] = useState(null);
+    const navigate = useNavigate();
 
     const adminSections = [
         {
@@ -106,13 +108,18 @@ export default function AdminPage() {
             <main className="page-content">
                 <section className="content-shell">
                     <div className="admin-sections-grid">
+
                         {adminSections.map((section) => {
                             const IconComponent = section.icon;
+
                             return (
                                 <button
                                     key={section.id}
                                     className={`admin-section-card ${activeSection === section.id ? 'active' : ''}`}
-                                    onClick={() => setActiveSection(section.id)}
+                                    onClick={() => {
+                                        setActiveSection(section.id);
+                                        navigate(`/admin/${section.id}`);
+                                    }}
                                     aria-pressed={activeSection === section.id}
                                     type="button"
                                 >
@@ -141,7 +148,9 @@ export default function AdminPage() {
                                 <p>Content for {activeSection} section coming soon...</p>
                             </div>
                         </div>
-                    )}
+                    )
+                    }
+
                 </section>
             </main>
 
