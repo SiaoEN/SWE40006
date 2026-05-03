@@ -55,7 +55,7 @@ export default function App() {
       <Route
         path="/admin/news"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireAdmin>
             <AdminNewsPage />
           </ProtectedRoute>
         }
@@ -71,7 +71,7 @@ export default function App() {
       <Route
         path="/admin/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireAdmin>
             <AdminProfilePage />
           </ProtectedRoute>
         }
@@ -87,7 +87,7 @@ export default function App() {
       <Route
         path="/admin/community"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireAdmin>
             <CommunityPageAdmin />
           </ProtectedRoute>
         }
@@ -103,7 +103,7 @@ export default function App() {
       <Route
         path="/admin/feedback"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireAdmin>
             <FeedbackPageAdmin />
           </ProtectedRoute>
         }
@@ -119,7 +119,7 @@ export default function App() {
       <Route
         path="/admin/restaurant"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireAdmin>
             <RestaurantPageAdmin />
           </ProtectedRoute>
         }

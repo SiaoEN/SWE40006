@@ -104,7 +104,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { userId } = req.user; // From JWT token via middleware
     const body = req.body || {};
-    const { username, email, avatar, bio } = body;
+    const { username, email, avatar, bio, oldPassword, newPassword, confirmNewPassword } = body;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -118,6 +118,37 @@ exports.updateProfile = async (req, res) => {
 
     const db = getDb();
     const usersCollection = db.collection('User');
+    const feedbackCollection = db.collection('Feedback');
+
+    const existingUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const passwordChangeRequested =
+      typeof newPassword === 'string' && newPassword.trim() !== '';
+
+    if (passwordChangeRequested) {
+      if (!oldPassword) {
+        return res.status(400).json({ success: false, message: 'Old password is required' });
+      }
+
+      const currentPassword = existingUser.password || '';
+      let oldPasswordMatches = false;
+      if (currentPassword.startsWith('$2')) {
+        oldPasswordMatches = await bcrypt.compare(oldPassword, currentPassword);
+      } else {
+        oldPasswordMatches = oldPassword === currentPassword;
+      }
+
+      if (!oldPasswordMatches) {
+        return res.status(400).json({ success: false, message: 'Old password is incorrect' });
+      }
+
+      if (!confirmNewPassword || newPassword !== confirmNewPassword) {
+        return res.status(400).json({ success: false, message: 'New password and confirmation password does not match' });
+      }
+    }
 
     // Build update object
     const updateData = {};
@@ -125,6 +156,9 @@ exports.updateProfile = async (req, res) => {
     if (email) updateData.email = email;
     if (typeof avatar !== 'undefined') updateData.avatar = avatar;
     if (typeof bio !== 'undefined') updateData.bio = bio;
+    if (passwordChangeRequested) {
+      updateData.password = await bcrypt.hash(newPassword, 10);
+    }
 
     // Update user document
     const result = await usersCollection.findOneAndUpdate(
@@ -133,11 +167,31 @@ exports.updateProfile = async (req, res) => {
       { returnDocument: 'after' }
     );
 
-    if (!result.value) {
+    // MongoDB drivers may return either { value: doc } or doc directly.
+    const updatedUser = result?.value || result;
+
+    if (!updatedUser || !updatedUser._id) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const updatedUser = result.value;
+    // Migrate feedback history so renamed users keep the same history
+    const feedbackUpdate = {
+      $set: {
+        userId: userId,
+        username: updatedUser.name,
+      },
+    };
+
+    await feedbackCollection.updateMany(
+      {
+        $or: [
+          { userId },
+          { username: existingUser.name },
+        ],
+      },
+      feedbackUpdate
+    );
+
     res.status(200).json({
       success: true,
       user: {

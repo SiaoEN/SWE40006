@@ -9,6 +9,7 @@ export default function AdminProfilePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [admin, setAdminState] = useState({
@@ -23,25 +24,39 @@ export default function AdminProfilePage() {
     avatar: admin.avatar,
   });
 
-  // Load user data from localStorage on mount
+  // Load user data from localStorage on mount and subscribe to updates
   useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setAdminState(prevAdmin => ({
-        ...prevAdmin,
-        username: storedUser.username || prevAdmin.username,
-        email: storedUser.email || prevAdmin.email,
-      }));
-      setFormData(prevForm => ({
-        ...prevForm,
-        username: storedUser.username || prevForm.username,
-        email: storedUser.email || prevForm.email,
-      }));
-    }
+    const loadUserData = () => {
+      const storedUser = getUser();
+      if (storedUser) {
+        setAdminState(prevAdmin => ({
+          ...prevAdmin,
+          username: storedUser.username || prevAdmin.username,
+          email: storedUser.email || prevAdmin.email,
+          avatar: storedUser.avatar || prevAdmin.avatar,
+        }));
+        setFormData(prevForm => ({
+          ...prevForm,
+          username: storedUser.username || prevForm.username,
+          email: storedUser.email || prevForm.email,
+          avatar: storedUser.avatar || prevForm.avatar,
+        }));
+      }
+    };
+    
+    loadUserData();
+    
+    // Listen for profile updates
+    const handler = (e) => {
+      loadUserData();
+    };
+    window.addEventListener('userUpdated', handler);
+    return () => window.removeEventListener('userUpdated', handler);
   }, []);
 
   const openEditProfile = () => {
     setError('');
+    setSaveSuccess('');
     setFormData({
       username: admin.username,
       email: admin.email,
@@ -108,6 +123,9 @@ export default function AdminProfilePage() {
           avatar: response.user.avatar || formData.avatar,
         });
 
+        // Show confirmation immediately (inside modal or page)
+        setSaveSuccess('Changes saved!');
+        setTimeout(() => setSaveSuccess(''), 2500);
         setIsEditing(false);
       } else {
         setError(response.message || 'Failed to update profile');
@@ -147,6 +165,7 @@ export default function AdminProfilePage() {
         menuItems={menuItems}
         profileTo="/admin/profile"
       />
+      {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
       <div className="admin-profile-header">
         <img src={admin.avatar} alt="admin avatar" className="avatar" />
         <h2 className="username">{admin.username}</h2>
@@ -162,6 +181,7 @@ export default function AdminProfilePage() {
             <h3>Edit Profile</h3>
 
             {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+                {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
 
             <label>Username</label>
             <input

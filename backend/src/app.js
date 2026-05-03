@@ -6,6 +6,8 @@ const path = require("path");
 const apiRoutes = require("./routes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
+const { register, login, updateProfile } = require("./controllers/authController");
+const authenticateToken = require("./middleware/auth");
 
 const app = express();
 
@@ -15,7 +17,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+// Allow larger JSON payloads (profile avatar data URLs can be sizeable)
+app.use(express.json({ limit: '5mb' }));
 
 // Some clients/requests may send JSON as text/plain; accept text bodies too
 app.use(express.text({ type: ['text/*', 'application/*+json'], limit: '1mb' }));
@@ -83,6 +86,11 @@ app.post("/api/reviews/:reviewId/dislike", reviewController.dislikeReview);
 app.post("/api/reviews/:reviewId/report", reviewController.reportReview);
 app.delete("/api/reviews/:reviewId", reviewController.deleteReview);
 app.post("/api/reviews/:reviewId/clear-reports", reviewController.clearReports);
+
+// Explicit auth routes to avoid router mounting issues in development and production.
+app.post("/api/auth/register", register);
+app.post("/api/auth/login", login);
+app.put("/api/auth/profile", authenticateToken, updateProfile);
 
 app.get("/", (_req, res) => {
   res.status(200).json({

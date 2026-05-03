@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaUtensils } from "react-icons/fa";
+import { getUser } from '../services/auth';
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +9,17 @@ import "../styles/MainPage.css";
 export default function AdminPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeSection, setActiveSection] = useState(null);
+    const [adminName, setAdminName] = useState(() => getUser()?.username || 'Admin');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const handler = (e) => {
+            const user = getUser();
+            setAdminName(user?.username || 'Admin');
+        };
+        window.addEventListener('userUpdated', handler);
+        return () => window.removeEventListener('userUpdated', handler);
+    }, []);
 
     const adminSections = [
         {
@@ -90,7 +101,7 @@ export default function AdminPage() {
                     >
                         <img src={logo} alt="Logo" className="sidebar-logo" />
                     </button>
-                    <h3>Admin</h3>
+                    <h3>{adminName}</h3>
                     
                 </div>
 

@@ -10,6 +10,12 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('reviews');
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmNewPassword: '',
+  });
   const [loading, setLoading] = useState(false);
 
   const [user, setUserState] = useState({
@@ -29,32 +35,93 @@ export default function ProfilePage() {
     email: user.email,
     bio: user.bio,
     avatar: user.avatar,
+    oldPassword: '',
+    newPassword: '',
+    confirmNewPassword: '',
   });
 
-  // Load user data from localStorage on mount
-  useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setUserState(prevUser => ({
-        ...prevUser,
-        username: storedUser.username || prevUser.username,
-        email: storedUser.email || prevUser.email,
-      }));
-      setFormData(prevForm => ({
-        ...prevForm,
-        username: storedUser.username || prevForm.username,
-        email: storedUser.email || prevForm.email,
-      }));
+  const buildPasswordErrors = (data) => {
+    const nextErrors = {
+      oldPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    };
+
+    const hasAnyPasswordInput =
+      Boolean(data.oldPassword) || Boolean(data.newPassword) || Boolean(data.confirmNewPassword);
+
+    if (!hasAnyPasswordInput) return nextErrors;
+
+    if (!data.oldPassword) {
+      nextErrors.oldPassword = 'Old password is required';
     }
+    if (!data.newPassword) {
+      nextErrors.newPassword = 'New password is required';
+    }
+    if (!data.confirmNewPassword) {
+      nextErrors.confirmNewPassword = 'Please confirm your new password';
+    }
+
+    if (data.newPassword && data.confirmNewPassword && data.newPassword !== data.confirmNewPassword) {
+      const mismatchMessage = 'New password and confirmation password does not match';
+      nextErrors.newPassword = mismatchMessage;
+      nextErrors.confirmNewPassword = mismatchMessage;
+    }
+
+    return nextErrors;
+  };
+
+  // Load user data from localStorage on mount and subscribe to updates
+  useEffect(() => {
+    const loadUserData = () => {
+      const storedUser = getUser();
+      if (storedUser) {
+        setUserState(prevUser => ({
+          ...prevUser,
+          username: storedUser.username || prevUser.username,
+          email: storedUser.email || prevUser.email,
+          avatar: storedUser.avatar || prevUser.avatar,
+          bio: storedUser.bio || prevUser.bio,
+        }));
+        setFormData(prevForm => ({
+          ...prevForm,
+          username: storedUser.username || prevForm.username,
+          email: storedUser.email || prevForm.email,
+          avatar: storedUser.avatar || prevForm.avatar,
+          bio: storedUser.bio || prevForm.bio,
+          oldPassword: '',
+          newPassword: '',
+          confirmNewPassword: '',
+        }));
+      }
+    };
+    
+    loadUserData();
+    
+    // Listen for profile updates
+    const handler = (e) => {
+      loadUserData();
+    };
+    window.addEventListener('userUpdated', handler);
+    return () => window.removeEventListener('userUpdated', handler);
   }, []);
 
   const openEditProfile = () => {
     setError('');
+    setSaveSuccess('');
+    setPasswordErrors({
+      oldPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    });
     setFormData({
       username: user.username,
       email: user.email,
       bio: user.bio,
       avatar: user.avatar,
+      oldPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
     });
     setIsEditing(true);
   };
@@ -83,9 +150,19 @@ export default function ProfilePage() {
 
   const handleChange = (e) => {
     setError('');
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+
+    setFormData((currentForm) => {
+      const nextForm = {
+        ...currentForm,
+        [name]: value,
+      };
+
+      if (name === 'oldPassword' || name === 'newPassword' || name === 'confirmNewPassword') {
+        setPasswordErrors(buildPasswordErrors(nextForm));
+      }
+
+      return nextForm;
     });
   };
 
@@ -104,8 +181,20 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    setPasswordErrors({
+      oldPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
+    });
+
     if (!formData.username || !formData.email) {
       setError('Username and email are required');
+      return;
+    }
+
+    const nextPasswordErrors = buildPasswordErrors(formData);
+    if (nextPasswordErrors.oldPassword || nextPasswordErrors.newPassword || nextPasswordErrors.confirmNewPassword) {
+      setPasswordErrors(nextPasswordErrors);
       return;
     }
 
@@ -118,10 +207,14 @@ export default function ProfilePage() {
         email: formData.email,
         avatar: formData.avatar,
         bio: formData.bio,
+        oldPassword: formData.oldPassword,
+        newPassword: formData.newPassword,
+        confirmNewPassword: formData.confirmNewPassword,
       });
 
       if (response.success && response.user) {
         // Update localStorage with new user data
+        console.log('Profile update response:', response.user);
         setUser(response.user);
 
         // Update component state with returned fields
@@ -138,14 +231,42 @@ export default function ProfilePage() {
           email: response.user.email,
           bio: response.user.bio || formData.bio,
           avatar: response.user.avatar || formData.avatar,
+          oldPassword: '',
+          newPassword: '',
+          confirmNewPassword: '',
         });
 
+        // Show confirmation immediately (inside modal or page)
+        setSaveSuccess('Changes saved!');
+        setTimeout(() => setSaveSuccess(''), 2500);
         setIsEditing(false);
       } else {
         setError(response.message || 'Failed to update profile');
       }
     } catch (err) {
-      setError(err.message || 'Error updating profile');
+      const message = err.message || 'Error updating profile';
+      const lowerMessage = String(message).toLowerCase();
+
+      if (lowerMessage.includes('old password')) {
+        setPasswordErrors((currentErrors) => ({
+          ...currentErrors,
+          oldPassword: message,
+        }));
+        setError(message);
+        return;
+      }
+
+      if (lowerMessage.includes('confirmation password') || lowerMessage.includes('password does not match')) {
+        setPasswordErrors((currentErrors) => ({
+          ...currentErrors,
+          newPassword: message,
+          confirmNewPassword: message,
+        }));
+        setError(message);
+        return;
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -180,6 +301,7 @@ export default function ProfilePage() {
         handleLogout={handleLogout}
         menuItems={menuItems}
       />
+      {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
       <div className="profile-header">
         <img src={user.avatar} alt="avatar" className="avatar" />
         <h2 className="username">{user.username}</h2>
@@ -257,6 +379,7 @@ export default function ProfilePage() {
             <h3>Edit Profile</h3>
 
             {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+            {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
 
             <label>Username</label>
             <input
@@ -275,6 +398,48 @@ export default function ProfilePage() {
               onChange={handleChange}
               disabled={loading}
             />
+
+            <label>Old Password</label>
+            <input
+              type="password"
+              name="oldPassword"
+              value={formData.oldPassword}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {passwordErrors.oldPassword && (
+              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                {passwordErrors.oldPassword}
+              </div>
+            )}
+
+            <label>New Password</label>
+            <input
+              type="password"
+              name="newPassword"
+              value={formData.newPassword}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {passwordErrors.newPassword && (
+              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                {passwordErrors.newPassword}
+              </div>
+            )}
+
+            <label>Confirm New Password</label>
+            <input
+              type="password"
+              name="confirmNewPassword"
+              value={formData.confirmNewPassword}
+              onChange={handleChange}
+              disabled={loading}
+            />
+            {passwordErrors.confirmNewPassword && (
+              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                {passwordErrors.confirmNewPassword}
+              </div>
+            )}
 
             <label>Bio</label>
             <textarea

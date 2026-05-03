@@ -20,12 +20,19 @@ api.interceptors.request.use((config) => {
 });
 
 export async function requestJson(path, options = {}) {
+  const token = localStorage.getItem("token");
+  const mergedHeaders = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (token && !mergedHeaders.Authorization) {
+    mergedHeaders.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
     ...options,
+    headers: mergedHeaders,
   });
 
   const isJson = response.headers.get("content-type")?.includes("application/json");

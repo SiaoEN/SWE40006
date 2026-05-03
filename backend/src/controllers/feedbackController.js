@@ -85,13 +85,11 @@ exports.getUserFeedback = async (req, res) => {
     const db = getDb();
     const coll = await getExistingCollection("Feedback");
 
-    // Support fetching by username as well as by userId value
-    const queryByUsername = { username: userId };
-    const queryByUserId = { userId };
-
-    // Prefer username match first (since usernames may contain readable strings)
-    const itemsByUsername = await coll.find(queryByUsername).sort({ createdAt: -1 }).toArray();
-    const items = itemsByUsername.length > 0 ? itemsByUsername : await coll.find(queryByUserId).sort({ createdAt: -1 }).toArray();
+    // Prefer userId so renamed users keep the same history
+    const itemsByUserId = await coll.find({ userId }).sort({ createdAt: -1 }).toArray();
+    const items = itemsByUserId.length > 0
+      ? itemsByUserId
+      : await coll.find({ username: userId }).sort({ createdAt: -1 }).toArray();
 
     res.status(200).json({ success: true, feedback: items });
   } catch (error) {

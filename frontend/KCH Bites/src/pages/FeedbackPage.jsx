@@ -15,15 +15,20 @@ export default function FeedbackPage() {
 	const [feedbackType, setFeedbackType] = useState("feedback");
 	const [message, setMessage] = useState("");
 	const [attachments, setAttachments] = useState([]);
-	const [loading, setLoading] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
 	const [mainRating, setMainRating] = useState(0);
 	const [hoverRating, setHoverRating] = useState(0);
 	const isRegisteredUser = getUserRole() === "user";
+	const userId = localStorage.getItem("userId") || "anonymous";
 
-	// We only rely on username now (userId is optional)
-	const username = localStorage.getItem("username") || localStorage.getItem("userFullName") || "Anonymous";
+	// Username used to fetch feedback; keep in state so we can react to profile changes
+	const [username, setUsername] = useState(() => {
+		const u = localStorage.getItem("username") || localStorage.getItem("userFullName");
+		return u || "Anonymous";
+	});
 
 	const handleLogout = () => {
 		localStorage.removeItem("token");
@@ -46,14 +51,26 @@ export default function FeedbackPage() {
 			fetchUserFeedback();
 		}, 10000); // every 10 seconds
 
-		return () => clearInterval(interval);
+		// Listen for user/profile updates and refetch feedback when username changes
+		const handler = (e) => {
+			const u = localStorage.getItem("username") || localStorage.getItem("userFullName") || "Anonymous";
+			setUsername(u);
+			// refetch immediately
+			fetchUserFeedback();
+		};
+		window.addEventListener('userUpdated', handler);
+
+		return () => {
+			clearInterval(interval);
+			window.removeEventListener('userUpdated', handler);
+		};
 	}, []);
 
 	const fetchUserFeedback = async () => {
 		try {
-			setLoading(true);
-			// Fetch feedback by username (backend supports username lookup)
-			const response = await api.get(`/feedback/username/${encodeURIComponent(username)}`);
+			setIsFetchingFeedback(true);
+			// Fetch feedback by stable userId so renames do not break history
+			const response = await api.get(`/feedback/user/${encodeURIComponent(userId)}`);
 			if (response.data.success) {
 				// Normalize feedback items to include `id` string (use _id when present)
 				const normalized = response.data.feedback.map((fb) => {
@@ -65,7 +82,7 @@ export default function FeedbackPage() {
 		} catch (err) {
 			console.error("Error fetching feedback:", err);
 		} finally {
-			setLoading(false);
+			setIsFetchingFeedback(false);
 		}
 	};
 
@@ -88,9 +105,10 @@ export default function FeedbackPage() {
 		}
 
 		try {
-			setLoading(true);
+			setIsSubmitting(true);
 			const formData = new FormData();
-			// Only send username; userId is optional on the server
+			// Send both userId and username so history stays stable across renames
+			formData.append("userId", userId);
 			formData.append("username", username);
 			formData.append("message", `Quick Rating: ${["Poor", "Fair", "Good", "Very Good", "Excellent"][mainRating - 1]}`);
 			formData.append("rating", mainRating);
@@ -114,7 +132,7 @@ export default function FeedbackPage() {
 			setError(err.response?.data?.message || "Error submitting rating");
 			console.error("Error submitting rating:", err);
 		} finally {
-			setLoading(false);
+			setIsSubmitting(false);
 		}
 	};
 
@@ -136,9 +154,10 @@ export default function FeedbackPage() {
 		}
 
 		try {
-			setLoading(true);
+			setIsSubmitting(true);
 			const formData = new FormData();
-			// Only send username; userId is optional on the server
+			// Send both userId and username so history stays stable across renames
+			formData.append("userId", userId);
 			formData.append("username", username);
 			formData.append("message", message);
 			formData.append("rating", 0);
@@ -168,7 +187,7 @@ export default function FeedbackPage() {
 			setError(err.response?.data?.message || "Error submitting feedback");
 			console.error("Error submitting feedback:", err);
 		} finally {
-			setLoading(false);
+			setIsSubmitting(false);
 		}
 	};
 
@@ -220,7 +239,7 @@ export default function FeedbackPage() {
 									onMouseEnter={() => setHoverRating(star)}
 									onMouseLeave={() => setHoverRating(0)}
 									onClick={() => setMainRating(star)}
-									disabled={loading}
+									disabled={isSubmitting}
 								>
 									★
 								</button>
@@ -241,7 +260,7 @@ export default function FeedbackPage() {
 							<button
 								className="btn-send-feedback"
 								onClick={() => (isRegisteredUser ? handleQuickRating() : navigate("/login"))}
-								disabled={loading || mainRating === 0}
+								disabled={isSubmitting || mainRating === 0}
 							>
 								Send Feedback
 							</button>
@@ -255,7 +274,7 @@ export default function FeedbackPage() {
 					<button
 						className="btn-detailed-feedback"
 						onClick={() => (isRegisteredUser ? setShowDetailedDialog(true) : navigate("/login"))}
-						disabled={loading}
+						disabled={isSubmitting}
 					>
 						Anything else you want to say?
 					</button>
@@ -288,7 +307,7 @@ export default function FeedbackPage() {
 										id="feedbackType"
 										value={feedbackType}
 										onChange={(e) => setFeedbackType(e.target.value)}
-										disabled={loading}
+										disabled={isSubmitting}
 										className="form-select"
 									>
 										<option value="feedback">General Feedback</option>
@@ -313,7 +332,7 @@ export default function FeedbackPage() {
 											: "Please share your feedback, suggestions or concerns so that we can improve!"
 										}
 										rows="6"
-										disabled={loading}
+											disabled={isSubmitting}
 									/>
 								</div>
 
@@ -328,7 +347,7 @@ export default function FeedbackPage() {
 											multiple
 											accept="image/*,.pdf"
 											onChange={handleFileChange}
-											disabled={loading}
+											disabled={isSubmitting}
 											className="file-input-hidden"
 										/>
 										<label htmlFor="attachments" className="file-upload-label">
@@ -365,16 +384,16 @@ export default function FeedbackPage() {
 										type="button"
 										className="btn-cancel"
 										onClick={() => setShowDetailedDialog(false)}
-										disabled={loading}
+										disabled={isSubmitting}
 									>
 										Cancel
 									</button>
 									<button
 										type="submit"
 										className="btn-submit"
-										disabled={loading || !isRegisteredUser}
+										disabled={isSubmitting || !isRegisteredUser}
 									>
-										{loading ? "Submitting..." : "Submit"}
+										{isSubmitting ? "Submitting..." : "Submit"}
 									</button>
 								</div>
 							</form>
@@ -390,7 +409,7 @@ export default function FeedbackPage() {
 							✓ The submitted feedback is locked and cannot be edited. Create new feedback to submit changes.
 						</p>
 					)}
-					{loading && feedbackList.length === 0 ? (
+					{isFetchingFeedback && feedbackList.length === 0 ? (
 						<p className="no-feedback">Loading...</p>
 					) : feedbackList.length === 0 ? (
 						<p className="no-feedback">

@@ -7,7 +7,7 @@ import logoutIcon from "../assets/logout.png";
 export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout, menuItems = [], profileTo = '/profile' }) {
     const navigate = useNavigate();
     const [userState, setUserState] = useState(() => getUser());
-    const userName = userState?.username || 'Name';
+    const userName = userState?.username || '';
 
     useEffect(() => {
         const handler = (e) => {
@@ -47,15 +47,12 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout,
                     <button
                         type="button"
                         className="sidebar-profile-button"
-                        onClick={() => {
-                            setIsSidebarOpen(false);
-                            navigate(profileTo);
-                        }}
+                        onClick={() => setIsSidebarOpen(false)}
                         aria-label="Close sidebar"
                     >
                         <img src={logo} alt="Logo" className="sidebar-logo" />
                     </button>
-                    <h3>{userName}</h3>
+                    {userName ? <h3>{userName}</h3> : null}
                 </div>
 
                 <div className="side-menu-wrap">

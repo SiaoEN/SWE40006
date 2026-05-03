@@ -32,6 +32,16 @@ export function setAuthToken(token) {
 export function setUser(user) {
   if (user) {
     localStorage.setItem("user", JSON.stringify(user));
+    // Keep commonly-used simple keys in sync so other pages (e.g. Feedback) can read them
+    try {
+      if (user.username) localStorage.setItem("username", user.username);
+      if (user._id) localStorage.setItem("userId", user._id);
+      if (user.role) localStorage.setItem("role", user.role);
+      if (user.email) localStorage.setItem("userEmail", user.email);
+      if (user.avatar) localStorage.setItem("avatar", user.avatar);
+    } catch (e) {
+      // ignore
+    }
     try {
       window.dispatchEvent(new CustomEvent('userUpdated', { detail: user }));
     } catch (e) {
@@ -100,7 +110,7 @@ export function isRegisteredUser() {
   return getUserRole() === 'user';
 }
 
-export async function updateUserProfile({ username, email, avatar, bio }) {
+export async function updateUserProfile({ username, email, avatar, bio, oldPassword, newPassword, confirmNewPassword }) {
   const token = getAuthToken();
   if (!token) {
     throw new Error("No token found");
@@ -111,6 +121,6 @@ export async function updateUserProfile({ username, email, avatar, bio }) {
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ username, email, avatar, bio }),
+    body: JSON.stringify({ username, email, avatar, bio, oldPassword, newPassword, confirmNewPassword }),
   });
 }
