@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 import "../styles/RestaurantPageAdmin.css";
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -155,6 +158,7 @@ function ViewIcon() {
 
 export default function RestaurantPageAdmin() {
 	const navigate = useNavigate();
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [restaurants, setRestaurants] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
@@ -173,6 +177,16 @@ export default function RestaurantPageAdmin() {
 		setPreviewRestaurant(restaurant);
 		setShowPreview(true);
 	};
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	};
+
+	const menuItems = [
+		{ label: 'Profile', to: '/admin/profile' }
+	];
 
 	useEffect(() => {
 		fetchRestaurants();
@@ -327,17 +341,22 @@ export default function RestaurantPageAdmin() {
 
 	return (
 		<>
-			{/* Hero Section */}
-			<section className="restaurant-admin-hero">
-				<div className="hero-content">
-					<button type="button" className="hero-back-btn" onClick={() => navigate("/main")}>
-						<span aria-hidden="true">←</span>
-						Back
-					</button>
-					<h1>Restaurant Management</h1>
-					<p>Add, edit, or delete restaurants</p>
-				</div>
-			</section>
+			<Header
+				title="Restaurant Management"
+				subtitle="Add, edit, or delete restaurants"
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+				bellTo="/admin/news"
+			/>
+
+			<Sidebar
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+				handleLogout={handleLogout}
+				menuItems={menuItems}
+				profileTo="/admin/profile"
+			/>
+
 
 			<main className="restaurant-admin-container">
 				{success && (
@@ -730,6 +749,8 @@ export default function RestaurantPageAdmin() {
 					</div>
 				)}
 			</main>
+
+			<Footer />
 		</>
 	);
 }

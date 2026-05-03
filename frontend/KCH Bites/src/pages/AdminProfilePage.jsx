@@ -1,5 +1,6 @@
 import '../styles/ProfilePage.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getUser, setUser, updateUserProfile } from '../services/auth';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
 import Footer from "../components/Footer";
@@ -7,24 +8,50 @@ import Footer from "../components/Footer";
 export default function AdminProfilePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [admin, setAdmin] = useState({
-    username: 'Admin User',
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const [admin, setAdminState] = useState({
+    username: 'Admin',
+    email: '',
     avatar: 'https://i.ytimg.com/vi/8BYa0U1h5Fs/sddefault.jpg',
   });
+
   const [formData, setFormData] = useState({
     username: admin.username,
+    email: admin.email,
     avatar: admin.avatar,
   });
 
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const storedUser = getUser();
+    if (storedUser) {
+      setAdminState(prevAdmin => ({
+        ...prevAdmin,
+        username: storedUser.username || prevAdmin.username,
+        email: storedUser.email || prevAdmin.email,
+      }));
+      setFormData(prevForm => ({
+        ...prevForm,
+        username: storedUser.username || prevForm.username,
+        email: storedUser.email || prevForm.email,
+      }));
+    }
+  }, []);
+
   const openEditProfile = () => {
+    setError('');
     setFormData({
       username: admin.username,
+      email: admin.email,
       avatar: admin.avatar,
     });
     setIsEditing(true);
   };
 
   const handleChange = (event) => {
+    setError('');
     const { name, value } = event.target;
 
     setFormData((currentForm) => ({
@@ -33,13 +60,63 @@ export default function AdminProfilePage() {
     }));
   };
 
-  const handleSave = () => {
-    setAdmin((currentAdmin) => ({
-      ...currentAdmin,
-      username: formData.username.trim() || currentAdmin.username,
-      avatar: formData.avatar.trim() || currentAdmin.avatar,
-    }));
-    setIsEditing(false);
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({
+          ...formData,
+          avatar: reader.result, // Store as data URL
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.username || !formData.email) {
+      setError('Username and email are required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await updateUserProfile({
+        username: formData.username,
+        email: formData.email,
+        avatar: formData.avatar,
+      });
+
+      if (response.success && response.user) {
+        // Update localStorage with new user data
+        setUser(response.user);
+
+        // Update component state
+        setAdminState(prevAdmin => ({
+          ...prevAdmin,
+          username: response.user.username,
+          email: response.user.email,
+          avatar: response.user.avatar || prevAdmin.avatar,
+        }));
+
+        setFormData({
+          username: response.user.username,
+          email: response.user.email,
+          avatar: response.user.avatar || formData.avatar,
+        });
+
+        setIsEditing(false);
+      } else {
+        setError(response.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      setError(err.message || 'Error updating profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -49,7 +126,7 @@ export default function AdminProfilePage() {
   };
 
   const menuItems = [
-    { label: 'Profile', to: '/profile' }
+    { label: 'Profile', to: '/admin/profile' }
   ];
 
   return (
@@ -57,9 +134,10 @@ export default function AdminProfilePage() {
       {/* HEADER */}
       <Header
         title="Profile"
-        subtitle="View and edit your profile information, reviews, and favorites."
+        subtitle="View and edit your profile information"
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
+        bellTo="/admin/news"
       />
 
       <Sidebar
@@ -67,6 +145,7 @@ export default function AdminProfilePage() {
         setIsSidebarOpen={setIsSidebarOpen}
         handleLogout={handleLogout}
         menuItems={menuItems}
+        profileTo="/admin/profile"
       />
       <div className="admin-profile-header">
         <img src={admin.avatar} alt="admin avatar" className="avatar" />
@@ -82,28 +161,66 @@ export default function AdminProfilePage() {
           <div className="modal">
             <h3>Edit Profile</h3>
 
+            {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+
             <label>Username</label>
             <input
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
+              disabled={loading}
+            />
+
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              disabled={loading}
             />
 
             <label>Profile Image URL</label>
-            <input type="text" name="avatar" value={formData.avatar} onChange={handleChange} />
+            <div className="image-input-row">
+              <input 
+                type="text" 
+                name="avatar" 
+                value={formData.avatar} 
+                onChange={handleChange}
+                className="url-input"
+                disabled={loading}
+              />
+              <label className="file-upload-label-small">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="file-input"
+                  disabled={loading}
+                />
+                <span>Choose Image</span>
+              </label>
+            </div>
 
             <div className="modal-actions">
               <button
                 type="button"
                 onClick={() => {
+                  setError('');
                   setIsEditing(false);
                 }}
+                disabled={loading}
               >
                 Cancel
               </button>
-              <button className="save-btn" type="button" onClick={handleSave}>
-                Save
+              <button 
+                className="save-btn" 
+                type="button" 
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

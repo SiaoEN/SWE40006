@@ -458,7 +458,7 @@ export default function AdminNewsPage() {
 	}
 
 	const menuItems = [
-		{ label: 'Profile', to: '/profile' }
+    { label: 'Profile', to: '/admin/profile' }
 	];
 
   return (
@@ -469,6 +469,7 @@ export default function AdminNewsPage() {
         subtitle="Create new posts, update existing ones, or remove outdated news."
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
+        bellTo="/admin/news"
       />
 
       <Sidebar
@@ -476,6 +477,7 @@ export default function AdminNewsPage() {
         setIsSidebarOpen={setIsSidebarOpen}
         handleLogout={handleLogout}
         menuItems={menuItems}
+        profileTo="/admin/profile"
       />
 
       <section className="admin-panel">

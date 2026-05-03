@@ -91,11 +91,17 @@ export default function AdminPage() {
                         <img src={logo} alt="Logo" className="sidebar-logo" />
                     </button>
                     <h3>Admin</h3>
+                    
                 </div>
 
                 <div className="side-menu-wrap">
                     <nav className="side-menu">
-                        <p className="side-menu-item">Profile</p>
+                        <p className="side-menu-item" onClick={() => {
+                            setIsSidebarOpen(false);
+                            navigate("/admin/profile");
+                        }}>
+                            Profile
+                        </p>
                     </nav>
                 </div>
 

@@ -81,9 +81,77 @@ exports.login = async (req, res) => {
       { expiresIn: jwtExpiresIn }
     );
 
-    res.status(200).json({ success: true, token });
+    // Return user object without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(200).json({ 
+      success: true, 
+      token,
+      user: {
+        _id: user._id.toString(),
+        username: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt
+      }
+    });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ success: false, message: 'Login error', error: err.message });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { userId } = req.user; // From JWT token via middleware
+    const body = req.body || {};
+    const { username, email, avatar, bio } = body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!username && !email && typeof avatar === 'undefined' && typeof bio === 'undefined') {
+      // Log for debugging when request body is unexpectedly empty
+      console.warn('updateProfile called with empty body. headers=', req.headers, 'body=', req.body);
+      return res.status(400).json({ success: false, message: 'At least one field is required' });
+    }
+
+    const db = getDb();
+    const usersCollection = db.collection('User');
+
+    // Build update object
+    const updateData = {};
+    if (username) updateData.name = username;
+    if (email) updateData.email = email;
+    if (typeof avatar !== 'undefined') updateData.avatar = avatar;
+    if (typeof bio !== 'undefined') updateData.bio = bio;
+
+    // Update user document
+    const result = await usersCollection.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+
+    if (!result.value) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const updatedUser = result.value;
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: updatedUser._id.toString(),
+        username: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar || null,
+        bio: updatedUser.bio || null,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+      }
+    });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ success: false, message: 'Profile update error', error: err.message });
   }
 };

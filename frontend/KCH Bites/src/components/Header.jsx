@@ -1,9 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBell } from "react-icons/fa";
 import logo from "../assets/kch-bites-logo.png";
 
-export default function Header({ title, subtitle, isSidebarOpen, setIsSidebarOpen }) {
+export default function Header({ title, subtitle, isSidebarOpen, setIsSidebarOpen, bellTo = '/news' }) {
+    const navigate = useNavigate();
+
     return (
         <header className="page-header">
             <div className="header-left">
@@ -25,7 +27,7 @@ export default function Header({ title, subtitle, isSidebarOpen, setIsSidebarOpe
             </div>
 
             <div className="header-actions">
-                <button type="button" className="icon-button header-icon-button" aria-label="Notifications">
+                <button type="button" className="icon-button header-icon-button" onClick={() => navigate(bellTo)} aria-label="Notifications">
                     <FaBell className="bell-icon" />
                 </button>
                 <Link to="/main" className="header-logo-badge" aria-label="Go to main page">

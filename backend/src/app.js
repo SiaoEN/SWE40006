@@ -17,6 +17,23 @@ app.use(
 );
 app.use(express.json());
 
+// Some clients/requests may send JSON as text/plain; accept text bodies too
+app.use(express.text({ type: ['text/*', 'application/*+json'], limit: '1mb' }));
+
+// If a text body was received, try to parse it as JSON so downstream handlers get an object
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (typeof req.body === 'string' && contentType.includes('text')) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (err) {
+      // If parsing fails, leave body as-is; handlers will validate and respond accordingly
+      console.warn('Failed to parse text body as JSON for', req.path);
+    }
+  }
+  next();
+});
+
 // Static file serving for uploads
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
+import { getUserRole } from "../services/auth";
 import "../styles/CommunityPage.css";
 import "../styles/RestaurantPage.css";
 
@@ -30,6 +34,8 @@ export default function RestaurantPage() {
 	const [lightboxIndex, setLightboxIndex] = useState(0);
 	const [lightboxZoom, setLightboxZoom] = useState(1);
 	const [isFavorite, setIsFavorite] = useState(false);
+	const isRegisteredUser = getUserRole() === "user";
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const reviewActionLabel = openedFromAdmin ? "View all reviews" : "Write a Review";
 
 	// Fetch restaurant by ID if not provided via navigation state
@@ -113,6 +119,11 @@ export default function RestaurantPage() {
 	}, [restaurantPhotos]);
 
 	const toggleFavorite = () => {
+		if (!isRegisteredUser) {
+			navigate("/login");
+			return;
+		}
+
 		const resId = restaurant?.id || restaurant?._id;
 		if (!resId) return;
 		
@@ -128,6 +139,19 @@ export default function RestaurantPage() {
 		localStorage.setItem("favoriteRestaurants", JSON.stringify(favorites));
 		setIsFavorite(!isFavorite);
 	};
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	};
+
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' },
+		{ label: 'Feedback', to: '/feedback' },
+		{ label: 'Community', to: '/community' },
+		{ label: 'Log In / Register', to: '/login' },
+	];
 
 	const operatingHoursText = useMemo(() => {
 		if (!restaurant?.operatingHours) {
@@ -198,6 +222,11 @@ export default function RestaurantPage() {
 				setLightboxPhotos([]);
 				setLightboxIndex(0);
 				setLightboxZoom(1);
+			if (!isRegisteredUser) {
+				setError("Please log in as a registered user to post reviews.");
+				navigate("/login");
+				return;
+			}
 			}
 			if (event.key === "ArrowLeft" && lightboxPhotos.length > 0) {
 				setLightboxIndex((prev) => (lightboxPhotos.length <= 1 ? prev : prev === 0 ? lightboxPhotos.length - 1 : prev - 1));
@@ -406,7 +435,7 @@ export default function RestaurantPage() {
 					<button
 						type="button"
 						className={`btn-favorite ${isFavorite ? "favorited" : ""}`}
-						onClick={toggleFavorite}
+						onClick={() => (isRegisteredUser ? toggleFavorite() : navigate("/login"))}
 						title={isFavorite ? "Remove from favorites" : "Add to favorites"}
 						aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
 					>
@@ -487,7 +516,7 @@ export default function RestaurantPage() {
 							type="button"
 							className="map-pin map-pin-large"
 							style={{ top: restaurant.location.top, left: restaurant.location.left }}
-							onClick={() => setShowReviewDialog(true)}
+							onClick={() => (isRegisteredUser ? setShowReviewDialog(true) : navigate("/login"))}
 						>
 							<span className="pin-dot" />
 							<span className="pin-label">{restaurant.name}</span>
@@ -508,6 +537,10 @@ export default function RestaurantPage() {
 						onClick={() => {
 							if (openedFromAdmin) {
 								navigate("/admin/community", { state: { fromAdmin: true } });
+								return;
+							}
+							if (!isRegisteredUser) {
+								navigate("/login");
 								return;
 							}
 							setShowReviewDialog(true);
@@ -623,7 +656,7 @@ export default function RestaurantPage() {
 								<button type="button" className="btn-cancel" onClick={() => setShowReviewDialog(false)} disabled={submitting}>
 									Cancel
 								</button>
-								<button type="submit" className="btn-submit" disabled={submitting || reviewForm.rating === 0}>
+								<button type="submit" className="btn-submit" disabled={submitting || reviewForm.rating === 0 || !isRegisteredUser}>
 									{submitting ? "Posting..." : "Post Review"}
 								</button>
 							</div>

@@ -1,5 +1,6 @@
 import '../styles/ProfilePage.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getUser, setUser, updateUserProfile } from '../services/auth';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
 import Footer from "../components/Footer";
@@ -8,14 +9,14 @@ export default function ProfilePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('reviews');
   const [isEditing, setIsEditing] = useState(false);
-  const [passwordError, setPasswordError] = useState({ field: '', message: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [user, setUser] = useState({
-    username: "Alex Tan",
-    email: "alex@email.com",
+  const [user, setUserState] = useState({
+    username: "User",
+    email: "",
     bio: "Food explorer around Kuching. Always hunting for the next best meal.",
     avatar: "https://i.ytimg.com/vi/8BYa0U1h5Fs/sddefault.jpg",
-    password: "password123",
     stats: {
       reviews: 1,
       favorites: 5,
@@ -28,21 +29,32 @@ export default function ProfilePage() {
     email: user.email,
     bio: user.bio,
     avatar: user.avatar,
-    oldPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
   });
 
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const storedUser = getUser();
+    if (storedUser) {
+      setUserState(prevUser => ({
+        ...prevUser,
+        username: storedUser.username || prevUser.username,
+        email: storedUser.email || prevUser.email,
+      }));
+      setFormData(prevForm => ({
+        ...prevForm,
+        username: storedUser.username || prevForm.username,
+        email: storedUser.email || prevForm.email,
+      }));
+    }
+  }, []);
+
   const openEditProfile = () => {
-    setPasswordError({ field: '', message: '' });
+    setError('');
     setFormData({
       username: user.username,
       email: user.email,
       bio: user.bio,
       avatar: user.avatar,
-      oldPassword: '',
-      newPassword: '',
-      confirmNewPassword: '',
     });
     setIsEditing(true);
   };
@@ -70,10 +82,7 @@ export default function ProfilePage() {
   ];
 
   const handleChange = (e) => {
-    if (passwordError.message) {
-      setPasswordError({ field: '', message: '' });
-    }
-
+    setError('');
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -94,57 +103,52 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = () => {
-    const passwordChangeRequested =
-      formData.oldPassword || formData.newPassword || formData.confirmNewPassword;
-
-    if (passwordChangeRequested) {
-      if (!formData.oldPassword) {
-        setPasswordError({
-          field: 'oldPassword',
-          message: 'Enter your old password to change it.',
-        });
-        return;
-      }
-
-      if (formData.oldPassword !== user.password) {
-        setPasswordError({ field: 'oldPassword', message: 'Old password is incorrect.' });
-        return;
-      }
-
-      if (!formData.newPassword || !formData.confirmNewPassword) {
-        setPasswordError({
-          field: !formData.newPassword ? 'newPassword' : 'confirmNewPassword',
-          message: 'Enter and confirm your new password.',
-        });
-        return;
-      }
-
-      if (formData.newPassword !== formData.confirmNewPassword) {
-        setPasswordError({
-          field: 'confirmNewPassword',
-          message: 'New password and confirmation do not match.',
-        });
-        return;
-      }
+  const handleSave = async () => {
+    if (!formData.username || !formData.email) {
+      setError('Username and email are required');
+      return;
     }
 
-    const { newPassword, confirmNewPassword, oldPassword, ...updatedUser } = formData;
+    try {
+      setLoading(true);
+      setError('');
 
-    setUser((currentUser) => ({
-      ...currentUser,
-      ...updatedUser,
-      password: passwordChangeRequested ? newPassword : currentUser.password,
-    }));
+      const response = await updateUserProfile({
+        username: formData.username,
+        email: formData.email,
+        avatar: formData.avatar,
+        bio: formData.bio,
+      });
 
-    setFormData({
-      ...updatedUser,
-      oldPassword: '',
-      newPassword: '',
-      confirmNewPassword: '',
-    });
-    setPasswordError({ field: '', message: '' });
-    setIsEditing(false);
+      if (response.success && response.user) {
+        // Update localStorage with new user data
+        setUser(response.user);
+
+        // Update component state with returned fields
+        setUserState(prevUser => ({
+          ...prevUser,
+          username: response.user.username,
+          email: response.user.email,
+          avatar: response.user.avatar || prevUser.avatar,
+          bio: response.user.bio || prevUser.bio,
+        }));
+
+        setFormData({
+          username: response.user.username,
+          email: response.user.email,
+          bio: response.user.bio || formData.bio,
+          avatar: response.user.avatar || formData.avatar,
+        });
+
+        setIsEditing(false);
+      } else {
+        setError(response.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      setError(err.message || 'Error updating profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -252,12 +256,15 @@ export default function ProfilePage() {
           <div className="modal">
             <h3>Edit Profile</h3>
 
+            {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+
             <label>Username</label>
             <input
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
+              disabled={loading}
             />
 
             <label>Email</label>
@@ -266,54 +273,15 @@ export default function ProfilePage() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              disabled={loading}
             />
-
-            <label>Old Password</label>
-            <div className="password-section">
-              <div className="password-row">
-                <input
-                  type="password"
-                  name="oldPassword"
-                  value={formData.oldPassword}
-                  onChange={handleChange}
-                />
-                {passwordError.field === 'oldPassword' && (
-                  <span className="error-message">{passwordError.message}</span>
-                )}
-              </div>
-
-              <label>New Password</label>
-              <div className="password-row">
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                />
-                {passwordError.field === 'newPassword' && (
-                  <span className="error-message">{passwordError.message}</span>
-                )}
-              </div>
-
-              <label>Confirm New Password</label>
-              <div className="password-row">
-                <input
-                  type="password"
-                  name="confirmNewPassword"
-                  value={formData.confirmNewPassword}
-                  onChange={handleChange}
-                />
-                {passwordError.field === 'confirmNewPassword' && (
-                  <span className="error-message">{passwordError.message}</span>
-                )}
-              </div>
-            </div>
 
             <label>Bio</label>
             <textarea
               name="bio"
               value={formData.bio}
               onChange={handleChange}
+              disabled={loading}
             />
 
             <label>Profile Image</label>
@@ -325,6 +293,7 @@ export default function ProfilePage() {
                 value={formData.avatar}
                 onChange={handleChange}
                 className="url-input"
+                disabled={loading}
               />
               <label className="file-upload-label-small">
                 <input
@@ -332,6 +301,7 @@ export default function ProfilePage() {
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="file-input"
+                  disabled={loading}
                 />
                 <span>Choose Image</span>
               </label>
@@ -340,14 +310,19 @@ export default function ProfilePage() {
             <div className="modal-actions">
               <button
                 onClick={() => {
-                  setPasswordError({ field: '', message: '' });
+                  setError('');
                   setIsEditing(false);
                 }}
+                disabled={loading}
               >
                 Cancel
               </button>
-              <button className="save-btn" onClick={handleSave}>
-                Save
+              <button 
+                className="save-btn" 
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

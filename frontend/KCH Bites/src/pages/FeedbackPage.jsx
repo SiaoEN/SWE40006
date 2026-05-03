@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
+import { getUserRole } from "../services/auth";
 import "../styles/FeedbackPage.css";
 
 export default function FeedbackPage() {
 	const navigate = useNavigate();
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [feedbackList, setFeedbackList] = useState([]);
 	const [showDetailedDialog, setShowDetailedDialog] = useState(false);
 	const [feedbackType, setFeedbackType] = useState("feedback");
@@ -15,9 +20,23 @@ export default function FeedbackPage() {
 	const [success, setSuccess] = useState("");
 	const [mainRating, setMainRating] = useState(0);
 	const [hoverRating, setHoverRating] = useState(0);
+	const isRegisteredUser = getUserRole() === "user";
 
 	// We only rely on username now (userId is optional)
 	const username = localStorage.getItem("username") || localStorage.getItem("userFullName") || "Anonymous";
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	};
+
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' },
+		{ label: 'Feedback', to: '/feedback' },
+		{ label: 'Community', to: '/community' },
+		{ label: 'Log In / Register', to: '/login' },
+	];
 
 	useEffect(() => {
 		fetchUserFeedback();
@@ -57,6 +76,12 @@ export default function FeedbackPage() {
 
 	// Submit quick rating only
 	const handleQuickRating = async () => {
+		if (!isRegisteredUser) {
+			setError("Please log in as a registered user to submit feedback.");
+			navigate("/login");
+			return;
+		}
+
 		if (mainRating === 0) {
 			setError("Please select a rating first");
 			return;
@@ -98,6 +123,12 @@ export default function FeedbackPage() {
 		e.preventDefault();
 		setError("");
 		setSuccess("");
+
+		if (!isRegisteredUser) {
+			setError("Please log in as a registered user to submit feedback.");
+			navigate("/login");
+			return;
+		}
 
 		if (!message.trim()) {
 			setError("Please enter your feedback message");
@@ -155,18 +186,20 @@ export default function FeedbackPage() {
 	};
 
 	return (
-		<>
-			{/* Hero Section */}
-			<section className="feedback-hero">
-				<div className="hero-content">
-					<button type="button" className="hero-back-btn" onClick={() => navigate("/main")}>
-						<span aria-hidden="true">←</span>
-						Back
-					</button>
-					<h1>Feedback</h1>
-					<p>Share your thoughts with our admin team</p>
-				</div>
-			</section>
+		<div className="feedback-page-wrapper">
+			<Header
+				title="Feedback"
+				subtitle="Share your thoughts with our admin team"
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+			/>
+
+			<Sidebar
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+				handleLogout={handleLogout}
+				menuItems={menuItems}
+			/>
 
 			<main className="feedback-container">
 				{success && <div className="alert alert-success">{success}</div>}
@@ -207,7 +240,7 @@ export default function FeedbackPage() {
 						<div className="rating-buttons">
 							<button
 								className="btn-send-feedback"
-								onClick={handleQuickRating}
+								onClick={() => (isRegisteredUser ? handleQuickRating() : navigate("/login"))}
 								disabled={loading || mainRating === 0}
 							>
 								Send Feedback
@@ -221,7 +254,7 @@ export default function FeedbackPage() {
 					<p>Have more to say or want to attach files? Send a detailed message to our admins.</p>
 					<button
 						className="btn-detailed-feedback"
-						onClick={() => setShowDetailedDialog(true)}
+						onClick={() => (isRegisteredUser ? setShowDetailedDialog(true) : navigate("/login"))}
 						disabled={loading}
 					>
 						Anything else you want to say?
@@ -339,7 +372,7 @@ export default function FeedbackPage() {
 									<button
 										type="submit"
 										className="btn-submit"
-										disabled={loading}
+										disabled={loading || !isRegisteredUser}
 									>
 										{loading ? "Submitting..." : "Submit"}
 									</button>
@@ -435,6 +468,7 @@ export default function FeedbackPage() {
 					)}
 				</div>
 			</main>
-		</>
+			<Footer />
+		</div>
 	);
 }

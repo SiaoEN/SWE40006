@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
+import { getUserRole } from "../services/auth";
 import "../styles/CommunityPage.css";
 
 export default function CommunityPage() {
 	const navigate = useNavigate();
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [reviews, setReviews] = useState([]);
 	const [restaurants, setRestaurants] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -26,6 +31,20 @@ export default function CommunityPage() {
 	const [userLikes, setUserLikes] = useState({});
 	const [lightboxPhotos, setLightboxPhotos] = useState([]);
 	const [lightboxIndex, setLightboxIndex] = useState(0);
+	const isRegisteredUser = getUserRole() === "user";
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	};
+
+	const menuItems = [
+		{ label: 'Profile', to: '/profile' },
+		{ label: 'Feedback', to: '/feedback' },
+		{ label: 'Community', to: '/community' },
+		{ label: 'Log In / Register', to: '/login' },
+	];
 
 	const getReviewKey = (review) => {
 		const rawId = review?.id || review?._id || (review?._id && (review._id.$oid || String(review._id)));
@@ -43,8 +62,8 @@ export default function CommunityPage() {
 		};
 	};
 
-	const userId = localStorage.getItem("userId") || "user_temp";
-	const username = localStorage.getItem("username") || localStorage.getItem("userFullName") || "Anonymous";
+	const userId = isRegisteredUser ? (localStorage.getItem("userId") || "user_temp") : "user_temp";
+	const username = isRegisteredUser ? (localStorage.getItem("username") || localStorage.getItem("userFullName") || "Anonymous") : "Anonymous";
 
 	useEffect(() => {
 		fetchAllReviews();
@@ -189,6 +208,12 @@ export default function CommunityPage() {
 		setError("");
 		setSuccess("");
 
+		if (!isRegisteredUser) {
+			setError("Please log in as a registered user to post reviews.");
+			navigate("/login");
+			return;
+		}
+
 		if (!reviewForm.restaurantName.trim() || !reviewForm.comment.trim() || reviewForm.rating === 0) {
 			setError("Please fill in all required fields");
 			return;
@@ -229,6 +254,11 @@ export default function CommunityPage() {
 	};
 
 	const handleLike = async (reviewId) => {
+		if (!isRegisteredUser) {
+			navigate("/login");
+			return;
+		}
+
 		try {
 			const response = await api.post(`/reviews/${reviewId}/like`, { userId });
 			if (response.data.success) {
@@ -244,6 +274,11 @@ export default function CommunityPage() {
 	};
 
 	const handleDislike = async (reviewId) => {
+		if (!isRegisteredUser) {
+			navigate("/login");
+			return;
+		}
+
 		try {
 			const response = await api.post(`/reviews/${reviewId}/dislike`, { userId });
 			if (response.data.success) {
@@ -259,6 +294,11 @@ export default function CommunityPage() {
 	};
 
 	const handleReportSubmit = async () => {
+		if (!isRegisteredUser) {
+			navigate("/login");
+			return;
+		}
+
 		if (!reportReason.trim()) {
 			setError("Please provide a reason for reporting");
 			return;
@@ -345,18 +385,16 @@ export default function CommunityPage() {
 	};
 
 	return (
-		<>
-			{/* Hero Section */}
-			<section className="community-hero">
-				<div className="hero-content">
-					<button type="button" className="hero-back-btn" onClick={() => navigate("/main")}>
-						<span aria-hidden="true">←</span>
-						Back
-					</button>
-					<h1>Community Reviews</h1>
-					<p>Share and read restaurant reviews from our community</p>
-				</div>
-			</section>
+		<div className="community-page-wrapper">
+
+			<Header title="Community Reviews" subtitle="Share and read restaurant reviews from our community" isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+
+			<Sidebar
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+				handleLogout={handleLogout}
+				menuItems={menuItems}
+			/>
 
 			<main className="community-container">
 				{success && <div className="alert alert-success">{success}</div>}
@@ -366,7 +404,7 @@ export default function CommunityPage() {
 				<div className="write-review-section">
 					<button
 						className="btn-write-review"
-						onClick={() => setShowReviewDialog(true)}
+						onClick={() => (isRegisteredUser ? setShowReviewDialog(true) : navigate("/login"))}
 						disabled={loading}
 					>
 						✏️ Write a Review
@@ -589,7 +627,7 @@ export default function CommunityPage() {
 												) : (
 													<button
 														className="btn-report"
-														onClick={() => setReportDialog(review.id)}
+														onClick={() => (isRegisteredUser ? setReportDialog(review.id) : navigate("/login"))}
 														title="Report this review"
 														disabled={loading}
 													>
@@ -647,7 +685,7 @@ export default function CommunityPage() {
 											<button
 												className={`btn-like ${userLikes[review.id]?.liked ? "active" : ""}`}
 												type="button"
-												onClick={() => handleLike(review.id)}
+												onClick={() => (isRegisteredUser ? handleLike(review.id) : navigate("/login"))}
 												disabled={loading}
 											>
 												👍 Helpful ({Array.isArray(review.likes) ? review.likes.length : 0})
@@ -655,7 +693,7 @@ export default function CommunityPage() {
 											<button
 												className={`btn-dislike ${userLikes[review.id]?.disliked ? "active" : ""}`}
 												type="button"
-												onClick={() => handleDislike(review.id)}
+												onClick={() => (isRegisteredUser ? handleDislike(review.id) : navigate("/login"))}
 												disabled={loading}
 											>
 												👎 Not Helpful ({Array.isArray(review.dislikes) ? review.dislikes.length : 0})
@@ -763,6 +801,7 @@ export default function CommunityPage() {
 					</div>
 				)}
 			</main>
-		</>
+			<Footer />
+		</div>
 	);
 }

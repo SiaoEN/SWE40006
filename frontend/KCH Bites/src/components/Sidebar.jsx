@@ -1,16 +1,29 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getUser } from '../services/auth';
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
 
-export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout, menuItems = [] }) {
+export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout, menuItems = [], profileTo = '/profile' }) {
+    const navigate = useNavigate();
+    const [userState, setUserState] = useState(() => getUser());
+    const userName = userState?.username || 'Name';
+
+    useEffect(() => {
+        const handler = (e) => {
+            setUserState(() => getUser());
+        };
+        window.addEventListener('userUpdated', handler);
+        return () => window.removeEventListener('userUpdated', handler);
+    }, []);
+
     const renderItem = (item, idx) => {
         // support either string labels or objects { label, to }
         if (typeof item === 'string') {
             const label = item;
             const to = '/' + label.toLowerCase().replace(/\s+/g, '-');
             return (
-                <Link key={idx} to={to} className="side-menu-item" onClick={() => setIsSidebarOpen(false)}>
+                <Link key={idx} to={to} className="side-menu-item" style={{ textDecoration: 'none' }} onClick={() => setIsSidebarOpen(false)}>
                     {label}
                 </Link>
             );
@@ -18,7 +31,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout,
 
         const { label, to } = item;
         return (
-            <Link key={idx} to={to} className="side-menu-item" onClick={() => setIsSidebarOpen(false)}>
+            <Link key={idx} to={to} className="side-menu-item" style={{ textDecoration: 'none' }} onClick={() => setIsSidebarOpen(false)}>
                 {label}
             </Link>
         );
@@ -34,12 +47,15 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout,
                     <button
                         type="button"
                         className="sidebar-profile-button"
-                        onClick={() => setIsSidebarOpen(false)}
+                        onClick={() => {
+                            setIsSidebarOpen(false);
+                            navigate(profileTo);
+                        }}
                         aria-label="Close sidebar"
                     >
                         <img src={logo} alt="Logo" className="sidebar-logo" />
                     </button>
-                    <h3>Name</h3>
+                    <h3>{userName}</h3>
                 </div>
 
                 <div className="side-menu-wrap">

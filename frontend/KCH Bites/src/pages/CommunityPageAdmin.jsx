@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 import "../styles/CommunityPageAdmin.css";
 
 export default function CommunityPageAdmin() {
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +36,16 @@ export default function CommunityPageAdmin() {
   };
 
   const adminId = localStorage.getItem("userId") || "admin_temp";
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
+
+  const adminMenuItems = [
+    { label: 'Profile', to: '/admin/profile' },
+  ];
 
   useEffect(() => {
     fetchAllReviews();
@@ -126,16 +140,22 @@ export default function CommunityPageAdmin() {
 
   return (
     <div className="community-admin-page">
-      <section className="hero community-hero">
-        <div className="hero-content">
-          <button type="button" className="hero-back-btn" onClick={() => navigate("/main")}>
-            <span aria-hidden="true">←</span>
-            Back
-          </button>
-          <h1>Admin Community Monitoring</h1>
-          <p className="muted">View all posted reviews, manage reported items, and remove content if necessary.</p>
-        </div>
-      </section>
+      <Header
+        title="Admin Community Monitoring"
+        subtitle="View user posted reviews and manage user reportedreviews"
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        bellTo="/admin/news"
+      />
+
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        handleLogout={handleLogout}
+        menuItems={adminMenuItems}
+        profileTo="/admin/profile"
+      />
+
 
       <main className="community-container">
         <section className="reviews-section">
@@ -243,6 +263,8 @@ export default function CommunityPageAdmin() {
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
       </main>
+
+      <Footer />
     </div>
   );
 }

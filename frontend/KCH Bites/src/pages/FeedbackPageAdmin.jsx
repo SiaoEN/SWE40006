@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 import "../styles/FeedbackPage.css";
 import "../styles/FeedbackPageAdmin.css";
 
 export default function FeedbackPageAdmin() {
 	const navigate = useNavigate();
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [allFeedback, setAllFeedback] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
@@ -13,6 +17,16 @@ export default function FeedbackPageAdmin() {
 	const [expandedFeedback, setExpandedFeedback] = useState(null);
 	// Per-card state: { [feedbackId]: { responseText, status } }
 	const [cardStates, setCardStates] = useState({});
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		window.location.href = "/login";
+	};
+
+	const menuItems = [
+		{ label: 'Profile', to: '/admin/profile' }
+	];
 
 	const getFeedbackKey = (feedback) => {
 		const rawId = feedback?.id || feedback?._id || (feedback?._id && (feedback._id.$oid || String(feedback._id)));
@@ -200,18 +214,22 @@ export default function FeedbackPageAdmin() {
 	};
 
 	return (
-		<>
-			{/* Hero Section */}
-			<section className="feedback-hero">
-				<div className="hero-content">
-					<button type="button" className="hero-back-btn" onClick={() => navigate("/main")}>
-						<span aria-hidden="true">←</span>
-						Back
-					</button>
-					<h1>Admin Feedback Management</h1>
-					<p>Review and respond to user feedback</p>
-				</div>
-			</section>
+		<div className="feedback-admin-page-wrapper">
+			<Header
+				title="Admin Feedback Management"
+				subtitle="Review and respond to user feedback"
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+					bellTo="/admin/news"
+			/>
+
+			<Sidebar
+				isSidebarOpen={isSidebarOpen}
+				setIsSidebarOpen={setIsSidebarOpen}
+				handleLogout={handleLogout}
+				menuItems={menuItems}
+				profileTo="/admin/profile"
+			/>
 
 			<main className="feedback-container">
 				{success && <div className="alert alert-success">{success}</div>}
@@ -376,6 +394,7 @@ export default function FeedbackPageAdmin() {
 					</div>
 				)}
 			</main>
-		</>
+			<Footer />
+		</div>
 	);
 }

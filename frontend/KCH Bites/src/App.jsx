@@ -19,19 +19,37 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/main" replace />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/login"
+        element={
+          <ProtectedRoute redirectIfLoggedIn userRedirect="/main" adminRedirect="/admin/main" requireAuth={false}>
+            <LoginPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <ProtectedRoute redirectIfLoggedIn userRedirect="/main" adminRedirect="/admin/main" requireAuth={false}>
+            <RegisterPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/main"
         element={
+          <ProtectedRoute requireAuth={false} blockAdmin>
             <MainPage />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/news"
         element={
+          <ProtectedRoute requireAuth={false} blockAdmin>
             <NewsPage />
+          </ProtectedRoute>
         }
       />
       <Route
@@ -45,7 +63,9 @@ export default function App() {
       <Route
         path="/profile"
         element={
+          <ProtectedRoute blockAdmin>
             <ProfilePage />
+          </ProtectedRoute>
         }
       />
       <Route
@@ -59,7 +79,9 @@ export default function App() {
       <Route
         path="/community"
         element={
+          <ProtectedRoute requireAuth={false} blockAdmin>
             <CommunityPage />
+          </ProtectedRoute>
         }
       />
       <Route
@@ -73,7 +95,9 @@ export default function App() {
       <Route
         path="/feedback"
         element={
+          <ProtectedRoute requireAuth={false} blockAdmin>
             <FeedbackPage />
+          </ProtectedRoute>
         }
       />
       <Route
@@ -87,7 +111,9 @@ export default function App() {
        <Route
         path="/restaurant/:restaurantId"
         element={
-        <RestaurantPage />
+          <ProtectedRoute requireAuth={false} blockAdmin>
+            <RestaurantPage />
+          </ProtectedRoute>
       }
       />
       <Route

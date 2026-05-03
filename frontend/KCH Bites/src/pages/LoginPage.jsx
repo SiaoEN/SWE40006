@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser, setAuthToken, isAdmin } from "../services/auth";
+import { loginUser, setAuthToken, setUser, isAdmin } from "../services/auth";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "../styles/LoginPage.css";
@@ -38,6 +38,11 @@ export default function LoginPage() {
       });
 
       setAuthToken(data.token);
+      
+      // Store user object in localStorage
+      if (data.user) {
+        setUser(data.user);
+      }
       
       // Redirect to admin main if admin, otherwise redirect to user main
       const redirectPath = isAdmin() ? "/admin/main" : "/main";
