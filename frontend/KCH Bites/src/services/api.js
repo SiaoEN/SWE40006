@@ -54,10 +54,19 @@ export async function requestJson(path, options = {}) {
  * @returns {Promise<{success: boolean, location: Object}>}
  */
 export async function saveUserLocation(userId, latitude, longitude) {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId || ["anonymous", "user_temp", "null", "undefined"].includes(normalizedUserId.toLowerCase())) {
+    return {
+      success: false,
+      skipped: true,
+      message: "Skipped saving location because no valid userId was provided",
+    };
+  }
+
   return requestJson("/location/save", {
     method: "POST",
     body: JSON.stringify({
-      userId,
+      userId: normalizedUserId,
       latitude,
       longitude,
     }),

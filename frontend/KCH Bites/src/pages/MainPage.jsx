@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking } from "react-icons/fa";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css"
@@ -13,6 +14,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 export default function MainPage() {
+	const navigate = useNavigate();
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [selectedCategories, setSelectedCategories] = useState([]);
@@ -30,6 +32,42 @@ export default function MainPage() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedRestaurant, setSelectedRestaurant] = useState(null);
 
+	const getStoredUserId = () => {
+		const isValid = (value) => {
+			const text = String(value || "").trim();
+			return Boolean(text) && !["anonymous", "user_temp", "null", "undefined"].includes(text.toLowerCase());
+		};
+
+		const fromSimpleKey = localStorage.getItem("userId");
+		if (isValid(fromSimpleKey)) {
+			return String(fromSimpleKey).trim();
+		}
+
+		try {
+			const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+			const candidateId = storedUser?.id || storedUser?._id || storedUser?.userId;
+			if (isValid(candidateId)) {
+				return String(candidateId).trim();
+			}
+		} catch {
+			// ignore invalid JSON and fall through
+		}
+
+		try {
+			const token = localStorage.getItem("token");
+			if (token) {
+				const payload = JSON.parse(atob(token.split('.')[1]));
+				if (isValid(payload?.userId)) {
+					return String(payload.userId).trim();
+				}
+			}
+		} catch {
+			// ignore invalid token payload and fall through
+		}
+
+		return null;
+	};
+
 	// Get user location on component mount
 	useEffect(() => {
 		const initializeLocation = async () => {
@@ -42,8 +80,10 @@ export default function MainPage() {
 
 				// Try to save location to backend
 				try {
-					const userId = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).id : "anonymous";
-					await saveUserLocation(userId, location.latitude, location.longitude);
+					const userId = getStoredUserId();
+					if (userId) {
+						await saveUserLocation(userId, location.latitude, location.longitude);
+					}
 				} catch (apiError) {
 					console.warn('Could not save location to backend:', apiError.message);
 				}
@@ -98,8 +138,10 @@ export default function MainPage() {
 
 			// Save location to backend
 			try {
-				const userId = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).id : "anonymous";
-				await saveUserLocation(userId, location.latitude, location.longitude);
+				const userId = getStoredUserId();
+				if (userId) {
+					await saveUserLocation(userId, location.latitude, location.longitude);
+				}
 			} catch (apiError) {
 				console.warn('Could not save location to backend:', apiError.message);
 			}
@@ -115,6 +157,17 @@ export default function MainPage() {
 		localStorage.removeItem("user");
 		window.location.href = "/login";
 	}
+
+	const openRestaurantPage = (restaurant) => {
+		if (!restaurant) return;
+
+		const restaurantId = restaurant.id || restaurant._id;
+		if (!restaurantId) return;
+
+		navigate(`/restaurant/${restaurantId}`, {
+			state: { restaurant },
+		});
+	};
 
 	const performSearch = (query) => {
 		if (!query || !restaurants.length) return;
@@ -438,7 +491,12 @@ export default function MainPage() {
 								(() => {
 									const [lng, lat] = selectedRestaurant.location.coordinates;
 									return (
-										<Marker position={[Number(lat), Number(lng)]}>
+										<Marker
+											position={[Number(lat), Number(lng)]}
+											eventHandlers={{
+												click: () => openRestaurantPage(selectedRestaurant),
+											}}
+										>
 											<Popup>
 												<div className="marker-popup">
 													<strong>{selectedRestaurant.name}</strong>

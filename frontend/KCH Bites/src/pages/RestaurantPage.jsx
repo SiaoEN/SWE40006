@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -117,6 +119,30 @@ export default function RestaurantPage() {
 			lightboxIndex: index,
 		}));
 	}, [restaurantPhotos]);
+
+	const restaurantMapPoint = useMemo(() => {
+		if (!restaurant) return null;
+
+		const isValidNumber = (value, min, max) => {
+			const numberValue = Number(value);
+			return Number.isFinite(numberValue) && numberValue >= min && numberValue <= max;
+		};
+
+		if (restaurant.location && Array.isArray(restaurant.location.coordinates) && restaurant.location.coordinates.length >= 2) {
+			const [lng, lat] = restaurant.location.coordinates.map(Number);
+			if (isValidNumber(lat, -90, 90) && isValidNumber(lng, -180, 180)) {
+				return { lat, lng };
+			}
+		}
+
+		const lat = restaurant.lat ?? restaurant.latitude;
+		const lng = restaurant.lng ?? restaurant.longitude ?? restaurant.lon ?? restaurant.long;
+		if (isValidNumber(lat, -90, 90) && isValidNumber(lng, -180, 180)) {
+			return { lat: Number(lat), lng: Number(lng) };
+		}
+
+		return null;
+	}, [restaurant]);
 
 	const toggleFavorite = () => {
 		if (!isRegisteredUser) {
@@ -511,16 +537,31 @@ export default function RestaurantPage() {
 						</button>
 					</div>
 					<div className="restaurant-map-board">
-						<div className="map-grid" aria-hidden="true" />
-						<button
-							type="button"
-							className="map-pin map-pin-large"
-							style={{ top: restaurant.location.top, left: restaurant.location.left }}
-							onClick={() => (isRegisteredUser ? setShowReviewDialog(true) : navigate("/login"))}
-						>
-							<span className="pin-dot" />
-							<span className="pin-label">{restaurant.name}</span>
-						</button>
+						{restaurantMapPoint ? (
+							<MapContainer
+								center={[restaurantMapPoint.lat, restaurantMapPoint.lng]}
+								zoom={16}
+								className="restaurant-mini-map"
+								style={{ height: "100%", width: "100%" }}
+								scrollWheelZoom={false}
+							>
+								<TileLayer
+									attribution="&copy; OpenStreetMap contributors"
+									url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+								/>
+								<Marker position={[restaurantMapPoint.lat, restaurantMapPoint.lng]}>
+									<Popup>
+										<strong>{restaurant.name}</strong>
+										{restaurant.address && <div>{restaurant.address}</div>}
+									</Popup>
+								</Marker>
+							</MapContainer>
+						) : (
+							<div className="restaurant-map-empty">
+								<p>No map coordinates were saved for this restaurant yet.</p>
+								<p>Add `lat`/`lng` in the admin form to show the preview.</p>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -712,7 +753,7 @@ export default function RestaurantPage() {
 										{review.attachments.map((attachment, index) => (
 											<img
 												key={index}
-												src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
+													src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
 												alt={attachment.originalName || attachment.filename}
 												className="review-photo"
 												onClick={(event) => {

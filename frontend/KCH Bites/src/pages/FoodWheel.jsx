@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import "../styles/FoodWheel.css";
 
 const foods = [
@@ -36,6 +37,34 @@ export default function FoodWheel() {
       setSelected(foods[randomIndex].label);
     }, 3200);
   };
+
+  // Trigger confetti celebration when result is displayed
+  useEffect(() => {
+    if (selected && !spinning) {
+      // Trigger confetti with multiple bursts
+      const duration = 2000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+      const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+      const interval = setInterval(() => {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti(
+          Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 },
+          })
+        );
+      }, 25);
+    }
+  }, [selected, spinning]);
 
   const gradientStops = foods
     .map((food, index) => {
@@ -109,10 +138,26 @@ export default function FoodWheel() {
               <button className="spin-btn" onClick={spinWheel} disabled={spinning}>
                 {spinning ? "Spinning..." : "Spin the Wheel"}
               </button>
-
-              {selected && <p className="result">You got: <strong>{selected}</strong></p>}
             </div>
           </div>
+
+          {selected && (
+            <div className="result-modal-overlay" onClick={() => setSelected("")}>
+              <div className="result-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="result-modal-content">
+                  <div className="result-emoji">{selected.split(" ")[0]}</div>
+                  <h3>You Got!</h3>
+                  <p className="result-food">{selected}</p>
+                  <button 
+                    className="result-close-btn" 
+                    onClick={() => setSelected("")}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
