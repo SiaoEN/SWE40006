@@ -111,7 +111,7 @@ export default function App() {
        <Route
         path="/restaurant/:restaurantId"
         element={
-          <ProtectedRoute requireAuth={false} blockAdmin>
+          <ProtectedRoute requireAuth={false}>
             <RestaurantPage />
           </ProtectedRoute>
       }
