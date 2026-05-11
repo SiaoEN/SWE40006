@@ -556,6 +556,7 @@ export default function RestaurantPage() {
 											<img
 												src={photo.src}
 												alt={photo.alt}
+												referrerPolicy="no-referrer"
 												className="restaurant-gallery-image"
 											/>
 										</button>
@@ -801,6 +802,7 @@ export default function RestaurantPage() {
 												key={index}
 													src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
 												alt={attachment.originalName || attachment.filename}
+												referrerPolicy="no-referrer"
 												className="review-photo"
 												onClick={(event) => {
 													event.stopPropagation();
@@ -836,6 +838,7 @@ export default function RestaurantPage() {
 							<img
 								src={lightboxPhotos[lightboxIndex]?.src}
 								alt={lightboxPhotos[lightboxIndex]?.alt || "Full view"}
+								referrerPolicy="no-referrer"
 								className="lightbox-image"
 								style={{ transform: `scale(${lightboxZoom})` }}
 							/>

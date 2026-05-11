@@ -116,6 +116,17 @@ const getPreviewPhotoSources = (restaurant) => {
 	return sources;
 };
 
+const parsePhotoUrls = (rawValue) => {
+	if (!rawValue) {
+		return [];
+	}
+
+	return rawValue
+		.split(/[\n,;]+/)
+		.map((entry) => entry.trim().replace(/^"|"$/g, "").replace(/^'|'$/g, ""))
+		.filter(Boolean);
+};
+
 function ActionIconButton({ className, label, onClick, disabled, children }) {
 	return (
 		<button
@@ -271,7 +282,7 @@ export default function RestaurantPageAdmin() {
 				address: formData.address || null,
 				description: formData.description || null,
 				tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
-				photos: formData.photos ? formData.photos.split(",").map((p) => p.trim()) : [],
+				photos: parsePhotoUrls(formData.photos),
 				operatingHours: formData.operatingHours,
 			};
 
@@ -694,6 +705,7 @@ export default function RestaurantPageAdmin() {
 											<img
 												src={photo}
 												alt={`${previewRestaurant.name} photo ${index + 1}`}
+													referrerPolicy="no-referrer"
 												className="preview-main-photo"
 												onError={(e) => {
 													e.currentTarget.style.display = "none";
