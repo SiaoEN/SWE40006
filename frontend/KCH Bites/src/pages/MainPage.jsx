@@ -21,7 +21,8 @@ export default function MainPage() {
 	const [distance, setDistance] = useState(10);
 	const [operationHours, setOperationHours] = useState("open-now");
 	const [specificTime, setSpecificTime] = useState("12:00");
-	const [rating, setRating] = useState("4");
+	const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
+	const [rating, setRating] = useState("none");
 
 	// Location-related states
 	const [userLocation, setUserLocation] = useState(null);
@@ -125,7 +126,8 @@ export default function MainPage() {
 		setDistance(10);
 		setOperationHours("open-now");
 		setSpecificTime("12:00");
-		setRating("4");
+		setSpecificDate(new Date().toISOString().split('T')[0]);
+		setRating("none");
 	};
 
 	const handleUseMyLocation = async () => {
@@ -404,24 +406,56 @@ export default function MainPage() {
 												checked={operationHours === "specific-time"}
 												onChange={() => setOperationHours("specific-time")}
 											/>
-											<span>Choose specific time</span>
+											<span>Choose specific date & time</span>
 										</label>
 										{operationHours === "specific-time" && (
-											<label className="time-picker-row">
-												<span className="filter-value">Time</span>
-												<input
-													type="time"
-													className="time-picker"
-													value={specificTime}
-													onChange={(event) => setSpecificTime(event.target.value)}
-													aria-label="Specific time filter"
-												/>
-											</label>
+											<div className="date-time-picker-row">
+												<div className="date-time-group">
+													<label className="date-time-label">Date</label>
+													<input
+														type="date"
+														className="date-picker"
+														value={specificDate}
+														onChange={(event) => setSpecificDate(event.target.value)}
+														aria-label="Specific date filter"
+													/>
+												</div>
+												<div className="date-time-group">
+													<label className="date-time-label">Time</label>
+													<input
+														type="time"
+														className="time-picker"
+														value={specificTime}
+														onChange={(event) => setSpecificTime(event.target.value)}
+														aria-label="Specific time filter"
+													/>
+												</div>
+											</div>
 										)}
 									</div>
 
 									<div className="filter-group">
 										<div className="filter-label">Rating</div>
+										<label className="filter-option">
+											<input
+												type="radio"
+												name="rating"
+												value="none"
+												checked={rating === "none"}
+												onChange={() => setRating("none")}
+											/>
+											<span>Don't filter by rating</span>
+										</label>
+										<label className="filter-option">
+											<input
+												type="radio"
+												name="rating"
+												value="5"
+												checked={rating === "5"}
+												onChange={() => setRating("5")}
+											/>
+											<span>5★ and above</span>
+										</label>
 										<label className="filter-option">
 											<input
 												type="radio"
@@ -441,6 +475,26 @@ export default function MainPage() {
 												onChange={() => setRating("3")}
 											/>
 											<span>3★ and above</span>
+										</label>
+										<label className="filter-option">
+											<input
+												type="radio"
+												name="rating"
+												value="2"
+												checked={rating === "2"}
+												onChange={() => setRating("2")}
+											/>
+											<span>2★ and above</span>
+										</label>
+										<label className="filter-option">
+											<input
+												type="radio"
+												name="rating"
+												value="1"
+												checked={rating === "1"}
+												onChange={() => setRating("1")}
+											/>
+											<span>1★ and above</span>
 										</label>
 									</div>
 								</div>
