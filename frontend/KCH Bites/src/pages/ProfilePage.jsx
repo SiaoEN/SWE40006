@@ -1,6 +1,7 @@
 import '../styles/ProfilePage.css';
 import { useState, useEffect } from 'react';
 import { getUser, setUser, updateUserProfile } from '../services/auth';
+import api from '../services/api';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
 import Footer from "../components/Footer";
@@ -17,6 +18,12 @@ export default function ProfilePage() {
     confirmNewPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
+  const [userReviews, setUserReviews] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState('');
+  const [favoriteRestaurants, setFavoriteRestaurants] = useState([]);
 
   const [user, setUserState] = useState({
     username: "User",
@@ -71,6 +78,130 @@ export default function ProfilePage() {
     return nextErrors;
   };
 
+  const getReviewKey = (review) => {
+    const rawId = review?.id || review?._id || (review?._id && (review._id.$oid || String(review._id)));
+    return rawId ? String(rawId) : '';
+  };
+
+  const getRestaurantKey = (restaurant) => {
+    const rawId = restaurant?.id || restaurant?._id || (restaurant?._id && (restaurant._id.$oid || String(restaurant._id)));
+    return rawId ? String(rawId) : '';
+  };
+
+  const formatReviewDate = (dateString) => {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const fetchUserReviews = async (profileUser = null) => {
+    const storedProfile = profileUser || getUser();
+    const normalizedUserId = String(storedProfile?._id || localStorage.getItem('userId') || '').trim();
+    const normalizedUsername = String(storedProfile?.username || localStorage.getItem('username') || '').trim().toLowerCase();
+
+    if (!normalizedUserId && !normalizedUsername) {
+      setUserReviews([]);
+      return;
+    }
+
+    try {
+      setReviewsLoading(true);
+      setReviewsError('');
+
+      const response = await api.get('/reviews');
+      if (!response.data?.success) {
+        setReviewsError('Failed to load your reviews');
+        setUserReviews([]);
+        return;
+      }
+
+      const allReviews = Array.isArray(response.data.reviews) ? response.data.reviews : [];
+      const filtered = allReviews
+        .filter((review) => {
+          const reviewUserId = String(review?.userId || '').trim();
+          const reviewUsername = String(review?.username || '').trim().toLowerCase();
+
+          const userIdMatch = normalizedUserId && reviewUserId && reviewUserId === normalizedUserId;
+          const usernameMatch = normalizedUsername && reviewUsername && reviewUsername === normalizedUsername;
+
+          return userIdMatch || usernameMatch;
+        })
+        .map((review) => ({
+          ...review,
+          id: getReviewKey(review),
+          rating: Number(review?.rating) || 0,
+        }))
+        .sort((a, b) => {
+          const left = new Date(b.createdAt || 0).getTime();
+          const right = new Date(a.createdAt || 0).getTime();
+          return left - right;
+        });
+
+      setUserReviews(filtered);
+    } catch (err) {
+      console.error('Error fetching profile reviews:', err);
+      setReviewsError('Unable to load your posted reviews right now');
+      setUserReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const fetchFavoriteRestaurants = async () => {
+    let favoriteIds = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem('favoriteRestaurants') || '[]');
+      favoriteIds = Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+    } catch (err) {
+      favoriteIds = [];
+    }
+
+    if (favoriteIds.length === 0) {
+      setFavoriteRestaurants([]);
+      setFavoritesError('');
+      setFavoritesLoading(false);
+      return;
+    }
+
+    try {
+      setFavoritesLoading(true);
+      setFavoritesError('');
+
+      const response = await api.get('/restaurants');
+      if (!response.data?.success) {
+        setFavoritesError('Failed to load favorite restaurants');
+        setFavoriteRestaurants([]);
+        return;
+      }
+
+      const restaurants = Array.isArray(response.data.restaurants) ? response.data.restaurants : [];
+      const restaurantById = new Map(
+        restaurants.map((restaurant) => [getRestaurantKey(restaurant), restaurant])
+      );
+
+      const orderedFavorites = favoriteIds
+        .map((id) => restaurantById.get(id))
+        .filter(Boolean);
+
+      setFavoriteRestaurants(orderedFavorites);
+    } catch (err) {
+      console.error('Error fetching favorite restaurants:', err);
+      setFavoritesError('Unable to load your favorite restaurants right now');
+      setFavoriteRestaurants([]);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
+
   // Load user data from localStorage on mount and subscribe to updates
   useEffect(() => {
     const loadUserData = () => {
@@ -93,17 +224,34 @@ export default function ProfilePage() {
           newPassword: '',
           confirmNewPassword: '',
         }));
+
+        fetchUserReviews(storedUser);
+        fetchFavoriteRestaurants();
+      } else {
+        setUserReviews([]);
+        fetchFavoriteRestaurants();
       }
     };
     
     loadUserData();
     
     // Listen for profile updates
-    const handler = (e) => {
+    const handler = () => {
       loadUserData();
     };
+
+    const favoritesStorageHandler = (event) => {
+      if (!event.key || event.key === 'favoriteRestaurants') {
+        fetchFavoriteRestaurants();
+      }
+    };
+
     window.addEventListener('userUpdated', handler);
-    return () => window.removeEventListener('userUpdated', handler);
+    window.addEventListener('storage', favoritesStorageHandler);
+    return () => {
+      window.removeEventListener('userUpdated', handler);
+      window.removeEventListener('storage', favoritesStorageHandler);
+    };
   }, []);
 
   const openEditProfile = () => {
@@ -126,27 +274,9 @@ export default function ProfilePage() {
     setIsEditing(true);
   };
 
-  const reviews = [
-    {
-      id: 1,
-      restaurant: "Harbourview Grill",
-      rating: 5,
-      comment: "Amazing lamb and great atmosphere.",
-      date: "20 May 2026",
-    },
-  ];
-
-  const averageRating = reviews.length
-    ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
+  const averageRating = userReviews.length
+    ? (userReviews.reduce((total, review) => total + review.rating, 0) / userReviews.length).toFixed(1)
     : '0.0';
-
-  const favorites = [
-    {
-      id: 1,
-      name: "Sibu Spice House",
-      cuisine: "Bornean / Chinese",
-    },
-  ];
 
   const handleChange = (e) => {
     setError('');
@@ -240,6 +370,7 @@ export default function ProfilePage() {
         setSaveSuccess('Changes saved!');
         setTimeout(() => setSaveSuccess(''), 2500);
         setIsEditing(false);
+        fetchUserReviews(response.user);
       } else {
         setError(response.message || 'Failed to update profile');
       }
@@ -313,11 +444,11 @@ export default function ProfilePage() {
 
         <div className="profile-stats">
           <div>
-            <strong>{user.stats.reviews}</strong>
+            <strong>{userReviews.length}</strong>
             <span>Reviews</span>
           </div>
           <div>
-            <strong>{user.stats.favorites}</strong>
+            <strong>{favoriteRestaurants.length}</strong>
             <span>Favorites</span>
           </div>
           <div>
@@ -347,14 +478,19 @@ export default function ProfilePage() {
       <div className="profile-content">
         {activeTab === 'reviews' && (
           <div className="card-list">
-            {reviews.map((r) => (
-              <div className="card" key={r.id}>
+            {reviewsLoading && <p className="card-text">Loading your reviews...</p>}
+            {!reviewsLoading && reviewsError && <p className="card-text">{reviewsError}</p>}
+            {!reviewsLoading && !reviewsError && userReviews.length === 0 && (
+              <p className="card-text">You have not posted any reviews yet.</p>
+            )}
+            {!reviewsLoading && !reviewsError && userReviews.map((review) => (
+              <div className="card" key={review.id || `${review.restaurantId}-${review.createdAt}`}>
                 <div className="card-header">
-                  <strong>{r.restaurant}</strong>
-                  <span>{r.rating} ★</span>
+                  <strong>{review.restaurantName || 'Unknown Restaurant'}</strong>
+                  <span>{review.rating} ★</span>
                 </div>
-                <p className="card-text">{r.comment}</p>
-                <span className="card-date">{r.date}</span>
+                <p className="card-text">{review.comment || 'No comment provided.'}</p>
+                <span className="card-date">{formatReviewDate(review.createdAt)}</span>
               </div>
             ))}
           </div>
@@ -362,10 +498,19 @@ export default function ProfilePage() {
 
         {activeTab === 'favorites' && (
           <div className="card-list">
-            {favorites.map((f) => (
-              <div className="card" key={f.id}>
-                <strong>{f.name}</strong>
-                <p className="card-text">{f.cuisine}</p>
+            {favoritesLoading && <p className="card-text">Loading your favorites...</p>}
+            {!favoritesLoading && favoritesError && <p className="card-text">{favoritesError}</p>}
+            {!favoritesLoading && !favoritesError && favoriteRestaurants.length === 0 && (
+              <p className="card-text">You have no favorite restaurants yet.</p>
+            )}
+            {!favoritesLoading && !favoritesError && favoriteRestaurants.map((restaurant) => (
+              <div className="card" key={getRestaurantKey(restaurant) || restaurant.name}>
+                <strong>{restaurant.name || 'Unnamed Restaurant'}</strong>
+                <p className="card-text">
+                  {Array.isArray(restaurant.tags) && restaurant.tags.length > 0
+                    ? restaurant.tags.join(' / ')
+                    : restaurant.address || 'No additional info available.'}
+                </p>
               </div>
             ))}
           </div>

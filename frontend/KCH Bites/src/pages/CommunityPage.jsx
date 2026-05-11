@@ -51,6 +51,11 @@ export default function CommunityPage() {
 		return rawId ? String(rawId) : "";
 	};
 
+	const getRestaurantKey = (restaurant) => {
+		const rawId = restaurant?.id || restaurant?._id || (restaurant?._id && (restaurant._id.$oid || String(restaurant._id)));
+		return rawId ? String(rawId) : "";
+	};
+
 	const normalizeReview = (review) => {
 		if (!review) return null;
 		return {
@@ -197,7 +202,7 @@ export default function CommunityPage() {
 		setReviewForm((prev) => ({
 			...prev,
 			restaurantName: restaurant.name,
-			restaurantId: restaurant.id || restaurant._id,
+			restaurantId: getRestaurantKey(restaurant),
 		}));
 		setRestaurantSearch(restaurant.name);
 		setShowRestaurantDropdown(false);

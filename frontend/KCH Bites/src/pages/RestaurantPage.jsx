@@ -40,6 +40,21 @@ export default function RestaurantPage() {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const reviewActionLabel = openedFromAdmin ? "View all reviews" : "Write a Review";
 
+	const getRestaurantKey = (item) => {
+		const rawId = item?.id || item?._id || (item?._id && (item._id.$oid || String(item._id)));
+		return rawId ? String(rawId) : "";
+	};
+
+	const getReviewKey = (review) => {
+		const rawId = review?.id || review?._id || (review?._id && (review._id.$oid || String(review._id)));
+		return rawId ? String(rawId) : "";
+	};
+
+	const currentRestaurantId = getRestaurantKey(restaurant);
+	const averageCommunityRating = reviews.length
+		? (reviews.reduce((sum, review) => sum + (Number(review?.rating) || 0), 0) / reviews.length).toFixed(1)
+		: Number(restaurant?.rating || 0).toFixed(1);
+
 	// Fetch restaurant by ID if not provided via navigation state
 	useEffect(() => {
 		if (location.state?.restaurant) {
@@ -150,7 +165,7 @@ export default function RestaurantPage() {
 			return;
 		}
 
-		const resId = restaurant?.id || restaurant?._id;
+		const resId = currentRestaurantId;
 		if (!resId) return;
 		
 		const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
@@ -220,27 +235,57 @@ export default function RestaurantPage() {
 	}, [restaurant?.operatingHours]);
 
 	useEffect(() => {
-		if (!restaurantId) {
-			return;
-		}
-
 		const fetchRestaurantReviews = async () => {
+			const routeRestaurantId = String(restaurantId || "").trim();
+			const normalizedRestaurantId = String(currentRestaurantId || "").trim();
+			const normalizedRestaurantName = String(restaurant?.name || "").trim().toLowerCase();
+
+			if (!routeRestaurantId && !normalizedRestaurantId && !normalizedRestaurantName) {
+				setReviews([]);
+				return;
+			}
+
 			try {
 				setReviewsLoading(true);
-				const response = await api.get(`/reviews/restaurant/${restaurantId}`);
-				if (response.data.success) {
-					setReviews(response.data.reviews);
+				const response = await api.get("/reviews");
+				if (!response.data?.success) {
+					setReviews([]);
+					return;
 				}
+
+				const allReviews = Array.isArray(response.data.reviews) ? response.data.reviews : [];
+				const filteredReviews = allReviews
+					.filter((review) => {
+						const reviewRestaurantId = String(review?.restaurantId || "").trim();
+						const reviewRestaurantName = String(review?.restaurantName || "").trim().toLowerCase();
+
+						const idMatched =
+							(normalizedRestaurantId && reviewRestaurantId === normalizedRestaurantId) ||
+							(routeRestaurantId && reviewRestaurantId === routeRestaurantId);
+
+						const nameMatched = normalizedRestaurantName && reviewRestaurantName === normalizedRestaurantName;
+
+						return idMatched || nameMatched;
+					})
+					.map((review) => ({
+						...review,
+						id: getReviewKey(review),
+						rating: Number(review?.rating) || 0,
+					}))
+					.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+				setReviews(filteredReviews);
 			} catch (err) {
 				console.error("Error fetching restaurant reviews:", err);
 				setError("Could not load restaurant reviews");
+				setReviews([]);
 			} finally {
 				setReviewsLoading(false);
 			}
 		};
 
 		fetchRestaurantReviews();
-	}, [restaurantId]);
+	}, [restaurantId, currentRestaurantId, restaurant?.name]);
 
 	useEffect(() => {
 		const handleEscape = (event) => {
@@ -382,10 +427,11 @@ export default function RestaurantPage() {
 
 		try {
 			setSubmitting(true);
+			const normalizedRestaurantId = currentRestaurantId || String(restaurantId || "").trim();
 			const formData = new FormData();
 			formData.append("userId", userId);
 			formData.append("username", username);
-			formData.append("restaurantId", restaurant.id);
+			formData.append("restaurantId", normalizedRestaurantId);
 			formData.append("restaurantName", restaurant.name);
 			formData.append("rating", reviewForm.rating);
 			formData.append("comment", reviewForm.comment);
@@ -401,7 +447,7 @@ export default function RestaurantPage() {
 				setSuccess("Review posted successfully!");
 				setShowReviewDialog(false);
 				setReviewForm({ rating: 0, comment: "", attachments: [] });
-				const refreshed = await api.get(`/reviews/restaurant/${restaurant.id}`);
+				const refreshed = await api.get(`/reviews/restaurant/${normalizedRestaurantId}`);
 				if (refreshed.data.success) {
 					setReviews(refreshed.data.reviews);
 				}
@@ -479,8 +525,8 @@ export default function RestaurantPage() {
 				</div>
 				<div className="restaurant-hero-card">
 					<div className="restaurant-score">
-						<strong>{Number(restaurant.rating || 0).toFixed(1)}</strong>
-						<span>Community rating</span>
+						<strong>{averageCommunityRating}</strong>
+						<span>Community rating ({reviews.length})</span>
 					</div>
 					<div className="restaurant-fact">
 						<span>Operating hours</span>
@@ -707,7 +753,7 @@ export default function RestaurantPage() {
 			)}
 
 			<section className="reviews-section restaurant-reviews-section">
-				<h2>Reviews from other users ({reviews.length})</h2>
+				<h2>Community reviews({reviews.length})</h2>
 				{reviewsLoading ? (
 					<p style={{ textAlign: "center", color: "#61707D" }}>Loading reviews...</p>
 				) : reviews.length === 0 ? (
@@ -722,11 +768,11 @@ export default function RestaurantPage() {
 								className="review-card review-card-link"
 								role="button"
 								tabIndex={0}
-								onClick={() => navigate("/community", { state: { reviewId: review.id, restaurantId: restaurant.id } })}
+								onClick={() => navigate("/community", { state: { reviewId: review.id, restaurantId: currentRestaurantId } })}
 								onKeyDown={(event) => {
 									if (event.key === "Enter" || event.key === " ") {
 										event.preventDefault();
-										navigate("/community", { state: { reviewId: review.id, restaurantId: restaurant.id } });
+										navigate("/community", { state: { reviewId: review.id, restaurantId: currentRestaurantId } });
 									}
 								}}
 							>
