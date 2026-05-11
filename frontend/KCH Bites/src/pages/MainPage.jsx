@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking } from "react-icons/fa";
+import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking, FaStar } from "react-icons/fa";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { icon as createLeafletIcon } from "leaflet";
 import "leaflet/dist/leaflet.css"
@@ -92,6 +92,130 @@ function getRestaurantRating(restaurant) {
 	}
 
 	return null;
+}
+
+function getRestaurantMedia(restaurant) {
+	const rawMedia = Array.isArray(restaurant?.images) && restaurant.images.length > 0
+		? restaurant.images
+		: Array.isArray(restaurant?.photos) && restaurant.photos.length > 0
+			? restaurant.photos
+			: [];
+
+	return rawMedia
+		.map((item, index) => {
+			if (typeof item === "string") {
+				return {
+					src: item,
+					alt: `${restaurant?.name || "Restaurant"} photo ${index + 1}`,
+				};
+			}
+
+			const resolvedSrc =
+				item?.src ||
+				item?.url ||
+				item?.path ||
+				(item?.filename ? `http://localhost:5000/uploads/feedback/${item.filename}` : "");
+
+			if (!resolvedSrc) {
+				return null;
+			}
+
+			return {
+				...item,
+				src: resolvedSrc,
+				alt: item?.alt || item?.originalName || `${restaurant?.name || "Restaurant"} photo ${index + 1}`,
+			};
+		})
+		.filter(Boolean);
+}
+
+function getRestaurantPreviewImage(restaurant) {
+	return getRestaurantMedia(restaurant)[0]?.src || null;
+}
+
+function getRestaurantPreviewTags(restaurant) {
+	if (!Array.isArray(restaurant?.tags)) {
+		return [];
+	}
+
+	return restaurant.tags
+		.map((tag) => String(tag || "").trim())
+		.filter(Boolean)
+		.slice(0, 3);
+}
+
+function getRestaurantPreviewDescription(restaurant) {
+	const description = String(restaurant?.description || "").trim();
+	if (!description) {
+		return restaurant?.address ? String(restaurant.address).trim() : "Hover to preview this restaurant.";
+	}
+
+	return description.length > 110 ? `${description.slice(0, 107)}...` : description;
+}
+
+function formatRestaurantRating(restaurant) {
+	const rating = getRestaurantRating(restaurant);
+	return rating == null ? "No rating yet" : `${rating.toFixed(1)} / 5`;
+}
+
+function RestaurantPreviewPopup({ restaurant, coordinates }) {
+	const previewImage = getRestaurantPreviewImage(restaurant);
+	const previewTags = getRestaurantPreviewTags(restaurant);
+	const previewDescription = getRestaurantPreviewDescription(restaurant);
+	const ratingText = formatRestaurantRating(restaurant);
+	const initial = String(restaurant?.name || "R").trim().charAt(0).toUpperCase() || "R";
+
+	return (
+		<Popup
+			direction="top"
+			offset={[0, -20]}
+			className="restaurant-preview-popup"
+			autoPan={true}
+			autoPanPadding={[48, 48]}
+			keepInView={true}
+			closeButton={false}
+			closeOnClick={false}
+			maxWidth={240}
+		>
+			<div className="restaurant-preview-card">
+				<div className="restaurant-preview-media">
+					{previewImage ? (
+						<img src={previewImage} alt={restaurant?.name ? `${restaurant.name} preview` : "Restaurant preview"} className="restaurant-preview-image" />
+					) : (
+						<div className="restaurant-preview-fallback" aria-hidden="true">
+							<span>{initial}</span>
+						</div>
+					)}
+				</div>
+
+				<div className="restaurant-preview-content">
+					<p className="restaurant-preview-kicker">Restaurant preview</p>
+					<div className="restaurant-preview-title-row">
+						<h4>{restaurant?.name || "Unnamed restaurant"}</h4>
+						<span className="restaurant-preview-rating">
+							<FaStar aria-hidden="true" />
+							{ratingText}
+						</span>
+					</div>
+
+					{restaurant?.address && <p className="restaurant-preview-address">{restaurant.address}</p>}
+					<p className="restaurant-preview-description">{previewDescription}</p>
+
+					{previewTags.length > 0 && (
+						<div className="restaurant-preview-tags" aria-label="Restaurant tags">
+							{previewTags.map((tag) => (
+								<span key={tag} className="restaurant-preview-tag">{tag}</span>
+							))}
+						</div>
+					)}
+
+					<p className="restaurant-preview-hint">
+						Click to open details{coordinates ? ` • ${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}` : ""}
+					</p>
+				</div>
+			</div>
+		</Popup>
+	);
 }
 
 function parseTimeToMinutes(value) {
@@ -874,9 +998,16 @@ export default function MainPage() {
 										position={[coordinates.lat, coordinates.lng]}
 										icon={restaurantIcon}
 										eventHandlers={{
+											mouseover: (event) => {
+												event.target.openPopup();
+											},
+											mouseout: (event) => {
+												event.target.closePopup();
+											},
 											click: () => openRestaurantPage(restaurant),
 										}}
 									>
+										<RestaurantPreviewPopup restaurant={restaurant} coordinates={coordinates} />
 										<Popup>
 											<div className="marker-popup">
 												<strong>{restaurant.name}</strong>
