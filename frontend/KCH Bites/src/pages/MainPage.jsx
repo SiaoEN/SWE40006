@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking } from "react-icons/fa";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { icon as createLeafletIcon } from "leaflet";
 import "leaflet/dist/leaflet.css"
 import "../styles//MainPage.css";
 import "../styles/LocationBanner.css";
@@ -13,6 +14,255 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
+const DEFAULT_FILTERS = {
+	selectedCategories: [],
+	distance: 10,
+	operationHours: "open-now",
+	specificTime: "12:00",
+	specificDate: new Date().toISOString().split('T')[0],
+	rating: "none",
+};
+
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+function createColoredMarkerIcon(fillColor) {
+	const svg = `
+		<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">
+			<path fill="${fillColor}" stroke="#ffffff" stroke-width="1.5" d="M12.5 0C6.2 0 1 5.2 1 11.5c0 8.9 11.5 29.5 11.5 29.5S24 20.4 24 11.5C24 5.2 18.8 0 12.5 0z"/>
+			<circle cx="12.5" cy="11.5" r="4.5" fill="#ffffff" opacity="0.95"/>
+		</svg>
+	`;
+
+	return createLeafletIcon({
+		iconUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+		iconSize: [25, 41],
+		iconAnchor: [12, 41],
+		popupAnchor: [1, -34],
+		title: "restaurant-marker",
+	});
+}
+
+const userLocationIcon = createColoredMarkerIcon("#2563eb");
+const restaurantIcon = createColoredMarkerIcon("#f97316");
+
+function normalizeText(value) {
+	return String(value || "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "");
+}
+
+function parseCoordinates(restaurant) {
+	if (!restaurant) return null;
+
+	if (restaurant.location && Array.isArray(restaurant.location.coordinates) && restaurant.location.coordinates.length >= 2) {
+		const [first, second] = restaurant.location.coordinates.map(Number);
+		if (Number.isFinite(first) && Number.isFinite(second)) {
+			if (Math.abs(second) <= 90 && Math.abs(first) <= 180) {
+				return { lat: second, lng: first };
+			}
+
+			if (Math.abs(first) <= 90 && Math.abs(second) <= 180) {
+				return { lat: first, lng: second };
+			}
+		}
+	}
+
+	const lat = restaurant.latitude ?? restaurant.lat;
+	const lng = restaurant.longitude ?? restaurant.lng ?? restaurant.lon ?? restaurant.long;
+	if (lat == null || lng == null) {
+		return null;
+	}
+
+	const parsedLat = Number(lat);
+	const parsedLng = Number(lng);
+	if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) {
+		return null;
+	}
+
+	return { lat: parsedLat, lng: parsedLng };
+}
+
+function getRestaurantRating(restaurant) {
+	const candidates = [restaurant?.rating, restaurant?.averageRating, restaurant?.avgRating];
+	for (const value of candidates) {
+		const parsed = Number(value);
+		if (Number.isFinite(parsed)) {
+			return parsed;
+		}
+	}
+
+	return null;
+}
+
+function parseTimeToMinutes(value) {
+	if (!value) return null;
+	const match = String(value).trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+	if (!match) return null;
+
+	let hours = Number(match[1]);
+	const minutes = Number(match[2] || 0);
+	const meridiem = String(match[3] || "").toLowerCase();
+
+	if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+		return null;
+	}
+
+	if (meridiem === "pm" && hours < 12) hours += 12;
+	if (meridiem === "am" && hours === 12) hours = 0;
+
+	return hours * 60 + minutes;
+}
+
+function parseHoursEntry(entry) {
+	if (!entry) return null;
+	if (typeof entry === "string") {
+		const trimmed = entry.trim();
+		if (!trimmed) return null;
+		if (/closed/i.test(trimmed)) {
+			return { closed: true };
+		}
+
+		const rangeMatch = trimmed.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+		if (rangeMatch) {
+			return {
+				start: parseTimeToMinutes(rangeMatch[1]),
+				end: parseTimeToMinutes(rangeMatch[2]),
+			};
+		}
+
+		return { raw: trimmed };
+	}
+
+	if (typeof entry === "object") {
+		return {
+			closed: Boolean(entry.closed),
+			start: parseTimeToMinutes(entry.start || entry.open || entry.from),
+			end: parseTimeToMinutes(entry.end || entry.close || entry.to),
+			raw: entry.raw || null,
+		};
+	}
+
+	return null;
+}
+
+function getOperatingHoursForDay(operatingHours, dayIndex) {
+	if (!operatingHours) return null;
+
+	if (Array.isArray(operatingHours)) {
+		return parseHoursEntry(operatingHours[dayIndex]);
+	}
+
+	if (typeof operatingHours === "object") {
+		const dayKey = DAY_NAMES[dayIndex];
+		const entries = Object.entries(operatingHours);
+		const matchedEntry = entries.find(([key]) => normalizeText(key).includes(dayKey) || normalizeText(key).startsWith(dayKey.slice(0, 3)));
+		if (matchedEntry) {
+			return parseHoursEntry(matchedEntry[1]);
+		}
+
+		return null;
+	}
+
+	if (typeof operatingHours === "string") {
+		const segments = operatingHours.split(/[|\n]/).map((segment) => segment.trim()).filter(Boolean);
+		const dayKey = DAY_NAMES[dayIndex];
+		const matchedSegment = segments.find((segment) => normalizeText(segment).includes(dayKey) || normalizeText(segment).includes(dayKey.slice(0, 3)));
+		if (matchedSegment) {
+			const hoursPart = matchedSegment.split(/[:=]/).slice(1).join(":").trim();
+			return parseHoursEntry(hoursPart || matchedSegment);
+		}
+
+		return parseHoursEntry(operatingHours);
+	}
+
+	return null;
+}
+
+function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue) {
+	const operatingHours = restaurant?.operatingHours;
+	if (!operatingHours) {
+		return true;
+	}
+
+	const referenceDate = dateValue ? new Date(`${dateValue}T${timeValue || "12:00"}:00`) : new Date();
+	if (Number.isNaN(referenceDate.getTime())) {
+		return true;
+	}
+
+	const dayEntry = getOperatingHoursForDay(operatingHours, referenceDate.getDay());
+	if (!dayEntry) {
+		return true;
+	}
+
+	if (dayEntry.closed) {
+		return false;
+	}
+
+	if (mode === "open-today") {
+		return true;
+	}
+
+	const targetMinutes = parseTimeToMinutes(timeValue);
+	if (targetMinutes == null) {
+		return true;
+	}
+
+	if (dayEntry.start != null && dayEntry.end != null) {
+		if (dayEntry.start <= dayEntry.end) {
+			return targetMinutes >= dayEntry.start && targetMinutes <= dayEntry.end;
+		}
+
+		return targetMinutes >= dayEntry.start || targetMinutes <= dayEntry.end;
+	}
+
+	if (typeof dayEntry.raw === "string") {
+		const cleaned = normalizeText(dayEntry.raw);
+		return cleaned ? !cleaned.includes("closed") : true;
+	}
+
+	return true;
+}
+
+function haversineDistanceKm(from, to) {
+	if (!from || !to) return Infinity;
+
+	const toRadians = (value) => (value * Math.PI) / 180;
+	const earthRadiusKm = 6371;
+	const deltaLat = toRadians(to.lat - from.lat);
+	const deltaLng = toRadians(to.lng - from.lng);
+	const lat1 = toRadians(from.lat);
+	const lat2 = toRadians(to.lat);
+	const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+	return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function FitRestaurantBounds({ restaurants, fallbackCenter }) {
+	const map = useMap();
+
+	useEffect(() => {
+		const points = restaurants
+			.map((restaurant) => parseCoordinates(restaurant))
+			.filter(Boolean);
+
+		if (points.length === 0) {
+			if (fallbackCenter && Array.isArray(fallbackCenter) && fallbackCenter.length === 2) {
+				map.setView(fallbackCenter, map.getZoom(), { animate: true });
+			}
+			return;
+		}
+
+		if (points.length === 1) {
+			map.setView([points[0].lat, points[0].lng], 15, { animate: true });
+			return;
+		}
+
+		const bounds = points.map((point) => [point.lat, point.lng]);
+		map.fitBounds(bounds, { padding: [40, 40] });
+	}, [fallbackCenter, map, restaurants]);
+
+	return null;
+}
+
 export default function MainPage() {
 	const navigate = useNavigate();
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,6 +273,7 @@ export default function MainPage() {
 	const [specificTime, setSpecificTime] = useState("12:00");
 	const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
 	const [rating, setRating] = useState("none");
+	const [appliedFilters, setAppliedFilters] = useState(null);
 
 	// Location-related states
 	const [userLocation, setUserLocation] = useState(null);
@@ -128,6 +379,19 @@ export default function MainPage() {
 		setSpecificTime("12:00");
 		setSpecificDate(new Date().toISOString().split('T')[0]);
 		setRating("none");
+		setAppliedFilters(null);
+	};
+
+	const handleApplyFilters = () => {
+		setAppliedFilters({
+			selectedCategories: [...selectedCategories],
+			distance,
+			operationHours,
+			specificTime,
+			specificDate,
+			rating,
+		});
+		setIsDropdownOpen(false);
 	};
 
 	const handleUseMyLocation = async () => {
@@ -170,6 +434,63 @@ export default function MainPage() {
 			state: { restaurant },
 		});
 	};
+
+	const filteredRestaurants = useMemo(() => {
+		if (!restaurants.length || !appliedFilters) {
+			return [];
+		}
+
+		const normalizedSelectedCategories = appliedFilters.selectedCategories.map((category) => normalizeText(category));
+		const selectedRating = Number(appliedFilters.rating);
+		const userPoint = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
+
+		return restaurants.filter((restaurant) => {
+			const restaurantCategories = Array.isArray(restaurant.tags) ? restaurant.tags.map((tag) => normalizeText(tag)) : [];
+			if (normalizedSelectedCategories.length > 0) {
+				const matchesCategory = normalizedSelectedCategories.some((category) => restaurantCategories.includes(category));
+				if (!matchesCategory) return false;
+			}
+
+			if (userPoint && Number.isFinite(appliedFilters.distance)) {
+				const restaurantPoint = parseCoordinates(restaurant);
+				if (restaurantPoint) {
+					const restaurantDistance = haversineDistanceKm(userPoint, restaurantPoint);
+					if (restaurantDistance > Number(appliedFilters.distance)) {
+						return false;
+					}
+				}
+			}
+
+			if (appliedFilters.operationHours === "open-now") {
+				if (!isRestaurantOpenAt(restaurant, "open-now", null, null)) return false;
+			}
+
+			if (appliedFilters.operationHours === "open-today") {
+				if (!isRestaurantOpenAt(restaurant, "open-today", appliedFilters.specificDate, null)) return false;
+			}
+
+			if (appliedFilters.operationHours === "specific-time") {
+				if (!isRestaurantOpenAt(restaurant, "specific-time", appliedFilters.specificDate, appliedFilters.specificTime)) return false;
+			}
+
+			if (appliedFilters.rating !== "none") {
+				const restaurantRating = getRestaurantRating(restaurant);
+				if (restaurantRating == null || restaurantRating < selectedRating) {
+					return false;
+				}
+			}
+
+			return true;
+		});
+	}, [appliedFilters, restaurants, userLocation]);
+
+	const mapRestaurants = useMemo(() => {
+		if (selectedRestaurant) {
+			return [selectedRestaurant];
+		}
+
+		return filteredRestaurants;
+	}, [filteredRestaurants, selectedRestaurant]);
 
 	const performSearch = (query) => {
 		if (!query || !restaurants.length) return;
@@ -503,7 +824,7 @@ export default function MainPage() {
 									<button type="button" className="filter-action filter-action--ghost" onClick={clearFilters}>
 										Clear
 									</button>
-									<button type="button" className="filter-action" onClick={() => setIsDropdownOpen(false)}>
+									<button type="button" className="filter-action" onClick={handleApplyFilters}>
 										Apply
 									</button>
 								</div>
@@ -520,6 +841,7 @@ export default function MainPage() {
 							className="map-box"
 							key={mapCenter.join('-')}
 						>
+							<FitRestaurantBounds restaurants={mapRestaurants} fallbackCenter={mapCenter} />
 							<TileLayer
 								attribution="&copy; OpenStreetMap contributors"
 								url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -529,6 +851,7 @@ export default function MainPage() {
 							{userLocation && (
 								<Marker
 									position={[userLocation.latitude, userLocation.longitude]}
+									icon={userLocationIcon}
 								>
 									<Popup>
 										<div className="marker-popup">
@@ -540,37 +863,32 @@ export default function MainPage() {
 								</Marker>
 							)}
 
-							{/* Selected restaurant marker from search */}
-							{selectedRestaurant && selectedRestaurant.location && Array.isArray(selectedRestaurant.location.coordinates) && (
-								(() => {
-									const [lng, lat] = selectedRestaurant.location.coordinates;
-									return (
-										<Marker
-											position={[Number(lat), Number(lng)]}
-											eventHandlers={{
-												click: () => openRestaurantPage(selectedRestaurant),
-											}}
-										>
-											<Popup>
-												<div className="marker-popup">
-													<strong>{selectedRestaurant.name}</strong>
-													{selectedRestaurant.address && <p>{selectedRestaurant.address}</p>}
-													{(selectedRestaurant.location && Array.isArray(selectedRestaurant.location.coordinates)) && (
-														<p>Lat: {Number(selectedRestaurant.location.coordinates[1]).toFixed(6)}, Lng: {Number(selectedRestaurant.location.coordinates[0]).toFixed(6)}</p>
-													)}
-													{/* fallback top-level fields if present */}
-													{(selectedRestaurant.latitude || selectedRestaurant.lat || selectedRestaurant.lng || selectedRestaurant.longitude) && (
-														<p>
-															Lat: {Number(selectedRestaurant.latitude || selectedRestaurant.lat || selectedRestaurant.latitude || 0).toFixed(6)},
-															Lng: {Number(selectedRestaurant.longitude || selectedRestaurant.lng || selectedRestaurant.long || 0).toFixed(6)}
-														</p>
-													)}
-												</div>
-											</Popup>
-										</Marker>
-									);
-								})()
-							)}
+							{mapRestaurants.map((restaurant) => {
+								const coordinates = parseCoordinates(restaurant);
+								if (!coordinates) return null;
+
+								const restaurantKey = String(restaurant.id || restaurant._id || restaurant.name || "");
+								return (
+									<Marker
+										key={restaurantKey}
+										position={[coordinates.lat, coordinates.lng]}
+										icon={restaurantIcon}
+										eventHandlers={{
+											click: () => openRestaurantPage(restaurant),
+										}}
+									>
+										<Popup>
+											<div className="marker-popup">
+												<strong>{restaurant.name}</strong>
+												{restaurant.address && <p>{restaurant.address}</p>}
+												<p>
+													Lat: {coordinates.lat.toFixed(6)}, Lng: {coordinates.lng.toFixed(6)}
+												</p>
+											</div>
+										</Popup>
+									</Marker>
+								);
+							})}
 						</MapContainer>
 					</div>
 				</section>
