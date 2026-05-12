@@ -11,6 +11,12 @@ const authenticateToken = require("./middleware/auth");
 
 const app = express();
 
+// Simple request logger to trace incoming requests (temporary debug)
+app.use((req, res, next) => {
+  try { console.log('REQ', req.method, req.originalUrl); } catch (e) {}
+  next();
+});
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -67,6 +73,7 @@ const upload = multer({
 
 const feedbackController = require("./controllers/feedbackController");
 const reviewController = require("./controllers/reviewController");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Explicit routes for feedback and reviews to avoid path-mount issues on the shared API router.
 app.post("/api/feedback", upload.array("attachments", 5), feedbackController.submitFeedback);
@@ -86,6 +93,13 @@ app.post("/api/reviews/:reviewId/dislike", reviewController.dislikeReview);
 app.post("/api/reviews/:reviewId/report", reviewController.reportReview);
 app.delete("/api/reviews/:reviewId", reviewController.deleteReview);
 app.post("/api/reviews/:reviewId/clear-reports", reviewController.clearReports);
+
+// Explicit notification routes so unread counts and drawer items are always available.
+// Quick debug route to verify path matching
+app.get('/api/notifications/debug', (_req, res) => res.status(200).json({ success: true, message: 'debug ok' }));
+app.use("/api/notifications", notificationRoutes);
+// Log when notification routes are mounted (helps diagnose 404 issues)
+console.log('Mounted notification routes at /api/notifications');
 
 // Explicit auth routes to avoid router mounting issues in development and production.
 app.post("/api/auth/register", register);
@@ -107,4 +121,20 @@ app.use("/api", apiRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
+// Debug: list registered routes (helps diagnose missing route matches)
+try {
+  if (app._router && Array.isArray(app._router.stack)) {
+    console.log('Registered route layers:');
+    app._router.stack.forEach((layer) => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+        console.log(`  route: ${methods} ${layer.route.path}`);
+      } else if (layer.name === 'router' && layer.regexp) {
+        console.log(`  router: ${layer.regexp}`);
+      }
+    });
+  }
+} catch (e) {
+  console.warn('Error while listing routes', e.message);
+}
 module.exports = app;

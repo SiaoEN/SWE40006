@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -9,8 +9,10 @@ import "../styles/CommunityPage.css";
 
 export default function CommunityPage() {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [reviews, setReviews] = useState([]);
+	const [filterType, setFilterType] = useState("all");
 	const [restaurants, setRestaurants] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
@@ -31,6 +33,7 @@ export default function CommunityPage() {
 	const [userLikes, setUserLikes] = useState({});
 	const [lightboxPhotos, setLightboxPhotos] = useState([]);
 	const [lightboxIndex, setLightboxIndex] = useState(0);
+	const handledReviewScrollRef = useRef(null);
 	const isRegisteredUser = getUserRole() === "user";
 
 	const handleLogout = () => {
@@ -74,6 +77,34 @@ export default function CommunityPage() {
 		fetchAllReviews();
 		fetchAllRestaurants();
 	}, []);
+
+	// Scroll to specific review if notified via query param
+	useEffect(() => {
+		const reviewId = searchParams.get("reviewId");
+		if (!reviewId) {
+			handledReviewScrollRef.current = null;
+			return;
+		}
+
+		if (handledReviewScrollRef.current === reviewId) {
+			return;
+		}
+
+		if (reviewId) {
+			const scrollTimeoutId = setTimeout(() => {
+				const reviewElement = document.getElementById(`review-${reviewId}`);
+				if (reviewElement) {
+					reviewElement.scrollIntoView({ behavior: "smooth", block: "start" });
+					// Highlight the review briefly
+					reviewElement.classList.add("review-highlight");
+					setTimeout(() => reviewElement.classList.remove("review-highlight"), 3000);
+					handledReviewScrollRef.current = reviewId;
+					window.history.replaceState({}, "", "/community");
+				}
+			}, 300);
+			return () => clearTimeout(scrollTimeoutId);
+		}
+	}, [searchParams, reviews]);
 
 	// Handle Escape key to close lightbox
 	useEffect(() => {
@@ -265,7 +296,7 @@ export default function CommunityPage() {
 		}
 
 		try {
-			const response = await api.post(`/reviews/${reviewId}/like`, { userId });
+			const response = await api.post(`/reviews/${reviewId}/like`, { userId, username });
 			if (response.data.success) {
 				setUserLikes((prev) => ({
 					...prev,
@@ -285,7 +316,7 @@ export default function CommunityPage() {
 		}
 
 		try {
-			const response = await api.post(`/reviews/${reviewId}/dislike`, { userId });
+			const response = await api.post(`/reviews/${reviewId}/dislike`, { userId, username });
 			if (response.data.success) {
 				setUserLikes((prev) => ({
 					...prev,
@@ -603,13 +634,39 @@ export default function CommunityPage() {
 					</div>
 				) : (
 					<div className="reviews-section">
-						<h2>Community Reviews ({reviews.length})</h2>
-						<div className="reviews-list">
-							{reviews.map((review) => {
+						<div className="reviews-header-section">
+							<h2>Community Reviews ({reviews.length})</h2>
+							<div className="filter-buttons">
+								<button
+									className={`filter-btn ${filterType === "all" ? "active" : ""}`}
+									onClick={() => setFilterType("all")}
+								>
+									All Reviews
+								</button>
+								<button
+									className={`filter-btn ${filterType === "myReviews" ? "active" : ""}`}
+									onClick={() => setFilterType("myReviews")}
+									disabled={!isRegisteredUser}
+								>
+									My Reviews
+								</button>
+							</div>
+						</div>
+						<div className="reviews-list" id="reviews-container">
+						{(() => {
+							const filteredReviews = filterType === "myReviews" 
+								? reviews.filter((r) => r.userId === userId)
+								: reviews;
+							return filteredReviews.length === 0 ? (
+								<div className="no-reviews">
+									<p>{filterType === "myReviews" ? "You haven't posted any reviews yet." : "No reviews available."}</p>
+								</div>
+							) : (
+								filteredReviews.map((review) => {
 								const isOwnReview = review.userId === userId;
 
 								return (
-									<div key={review.id} className="review-card">
+									<div key={review.id} id={`review-${review.id}`} className="review-card">
 										{/* Review Header */}
 										<div className="review-header">
 											<div className="review-user-info">
@@ -706,7 +763,9 @@ export default function CommunityPage() {
 										</div>
 									</div>
 								);
-							})}
+							})
+						);
+						})()}
 						</div>
 					</div>
 				)}

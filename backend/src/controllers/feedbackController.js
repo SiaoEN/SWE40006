@@ -1,5 +1,6 @@
 const { getClient, getExistingCollection } = require("../../config/db");
 const { ObjectId } = require("mongodb");
+const { createNotification } = require("./notificationController");
 
 const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
 
@@ -14,6 +15,31 @@ function unwrapFindOneAndUpdateResult(result) {
     return result.value;
   }
   return result;
+}
+
+async function resolveNotificationRecipient(db, feedbackItem) {
+  const usersCollection = db.collection("User");
+  const candidateUserId = feedbackItem?.userId;
+  const candidateUsername = feedbackItem?.username;
+
+  if (candidateUserId && ObjectId.isValid(candidateUserId)) {
+    const userById = await usersCollection.findOne({ _id: new ObjectId(candidateUserId) });
+    if (userById) {
+      return { userId: userById._id.toString(), username: userById.name || candidateUsername || "" };
+    }
+  }
+
+  if (candidateUsername) {
+    const userByName = await usersCollection.findOne({ name: candidateUsername });
+    if (userByName) {
+      return { userId: userByName._id.toString(), username: userByName.name || candidateUsername };
+    }
+  }
+
+  return {
+    userId: candidateUserId || null,
+    username: candidateUsername || null,
+  };
 }
 
 // Submit feedback
@@ -166,6 +192,22 @@ exports.updateFeedbackStatus = async (req, res) => {
     }
 
     if (!updated) return res.status(404).json({ success: false, message: "Feedback not found" });
+
+    // Create notification for feedback author
+    const recipient = await resolveNotificationRecipient(db, updated);
+    if (adminResponse) {
+      const notificationTitle = "Admin replied to your feedback!";
+      const notificationMessage = `Admin response: ${adminResponse.substring(0, 100)}...`;
+      await createNotification(recipient, "feedback_reply", notificationTitle, notificationMessage, feedbackId);
+    } else if (status && status !== "pending") {
+      const statusMessages = {
+        "in-review": "Your feedback is now being reviewed",
+        "resolved": "Your feedback has been resolved!",
+        "closed": "Your feedback has been closed",
+      };
+      const message = statusMessages[status] || `Your feedback status changed to: ${status}`;
+      await createNotification(recipient, "feedback_reply", "Feedback Status Updated", message, feedbackId);
+    }
 
     res.status(200).json({ success: true, message: "Feedback status updated successfully", feedback: updated });
   } catch (error) {

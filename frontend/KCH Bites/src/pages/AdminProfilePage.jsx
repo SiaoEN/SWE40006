@@ -156,6 +156,7 @@ export default function AdminProfilePage() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         bellTo="/admin/news"
+        notificationMode="navigate"
       />
 
       <Sidebar

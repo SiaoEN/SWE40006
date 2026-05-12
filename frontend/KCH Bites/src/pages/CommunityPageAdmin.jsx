@@ -146,6 +146,7 @@ export default function CommunityPageAdmin() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         bellTo="/admin/news"
+        notificationMode="navigate"
       />
 
       <Sidebar

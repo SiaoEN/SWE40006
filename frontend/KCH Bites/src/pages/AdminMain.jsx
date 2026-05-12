@@ -76,7 +76,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="header-actions">
-                    <button type="button" className="icon-button header-icon-button" aria-label="Notifications">
+                    <button type="button" className="icon-button header-icon-button" aria-label="Admin news" onClick={() => navigate("/admin/news")}>
                         <FaBell className="bell-icon" />
                     </button>
                     <div className="header-logo-badge" aria-hidden="true">

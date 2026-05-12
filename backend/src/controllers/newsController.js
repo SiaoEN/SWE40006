@@ -1,4 +1,5 @@
 const { getDb } = require("../../config/db");
+const { createNotification } = require("./notificationController");
 
 function toSectionId(prefix, index) {
   return `${prefix}-${index + 1}`;
@@ -201,6 +202,31 @@ exports.createNews = async (req, res) => {
       _id: result.insertedId,
       ...payload,
     };
+
+    // Create notifications for all registered users
+    try {
+      const usersCollection = db.collection("User");
+      const allUsers = await usersCollection
+        .find({}, { projection: { _id: 1, name: 1 } })
+        .toArray();
+
+      // Create notifications for each user
+      for (const user of allUsers) {
+        await createNotification(
+          {
+            userId: user._id?.toString?.() || null,
+            username: user.name || null,
+          },
+          "news",
+          "New News Posted!",
+          `Check out: ${title}`,
+          result.insertedId.toString()
+        );
+      }
+    } catch (notificationErr) {
+      console.warn("Error creating news notifications:", notificationErr.message);
+      // Don't fail the entire operation if notifications fail
+    }
 
     res.status(201).json({
       success: true,

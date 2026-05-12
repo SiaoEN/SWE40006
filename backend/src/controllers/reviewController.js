@@ -1,5 +1,6 @@
 const { getClient, getExistingCollection } = require("../../config/db");
 const { ObjectId } = require("mongodb");
+const { createNotification } = require("./notificationController");
 
 const DB_NAME = process.env.MONGODB_DBNAME || "KCHBites";
 
@@ -14,6 +15,57 @@ function unwrapFindOneAndUpdateResult(result) {
     return result.value;
   }
   return result;
+}
+
+async function resolveNotificationRecipient(db, reviewAuthor) {
+  const usersCollection = db.collection("User");
+  const candidateUserId = reviewAuthor?.userId;
+  const candidateUsername = reviewAuthor?.username;
+
+  if (candidateUserId && ObjectId.isValid(candidateUserId)) {
+    const userById = await usersCollection.findOne({ _id: new ObjectId(candidateUserId) });
+    if (userById) {
+      return { userId: userById._id.toString(), username: userById.name || candidateUsername || "" };
+    }
+  }
+
+  if (candidateUsername) {
+    const userByName = await usersCollection.findOne({ name: candidateUsername });
+    if (userByName) {
+      return { userId: userByName._id.toString(), username: userByName.name || candidateUsername };
+    }
+  }
+
+  return {
+    userId: candidateUserId || null,
+    username: candidateUsername || null,
+  };
+}
+
+async function resolveActorUsername(db, userId, fallbackUsername = null) {
+  if (fallbackUsername && fallbackUsername !== userId) {
+    return fallbackUsername;
+  }
+
+  if (!userId) {
+    return fallbackUsername || "Someone";
+  }
+
+  const usersCollection = db.collection("User");
+
+  if (ObjectId.isValid(userId)) {
+    const userById = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    if (userById?.name) {
+      return userById.name;
+    }
+  }
+
+  const userByName = await usersCollection.findOne({ name: userId });
+  if (userByName?.name) {
+    return userByName.name;
+  }
+
+  return fallbackUsername || userId || "Someone";
 }
 
 // Submit restaurant review
@@ -102,7 +154,7 @@ exports.getReviewsByRestaurant = async (req, res) => {
 exports.likeReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const { userId } = req.body;
+    const { userId, username } = req.body;
 
     if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
@@ -120,6 +172,20 @@ exports.likeReview = async (req, res) => {
     const updated = unwrapFindOneAndUpdateResult(resp);
     if (!updated) return res.status(404).json({ success: false, message: "Review not found" });
 
+    // Create notification for review author if they're not the one liking
+    if (updated.userId !== userId) {
+      const recipient = await resolveNotificationRecipient(db, updated);
+      const userWhoLiked = await resolveActorUsername(db, userId, username);
+      await createNotification(
+        recipient,
+        "review_like",
+        "Your review got a like!",
+        `${userWhoLiked} liked your review on "${updated.restaurantName}"`,
+        reviewId,
+        { userId, username: userWhoLiked }
+      );
+    }
+
     res.status(200).json({ success: true, message: "Review liked", review: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error liking review", error: error.message });
@@ -130,7 +196,7 @@ exports.likeReview = async (req, res) => {
 exports.dislikeReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const { userId } = req.body;
+    const { userId, username } = req.body;
 
     if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
@@ -147,6 +213,20 @@ exports.dislikeReview = async (req, res) => {
 
     const updated = unwrapFindOneAndUpdateResult(resp);
     if (!updated) return res.status(404).json({ success: false, message: "Review not found" });
+
+    // Create notification for review author if they're not the one disliking
+    if (updated.userId !== userId) {
+      const recipient = await resolveNotificationRecipient(db, updated);
+      const userWhoDisliked = await resolveActorUsername(db, userId, username);
+      await createNotification(
+        recipient,
+        "review_dislike",
+        "Your review got a not helpful vote",
+        `${userWhoDisliked} marked your review on "${updated.restaurantName}" as not helpful`,
+        reviewId,
+        { userId, username: userWhoDisliked }
+      );
+    }
 
     res.status(200).json({ success: true, message: "Review disliked", review: updated });
   } catch (error) {

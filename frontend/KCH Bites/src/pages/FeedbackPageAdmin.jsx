@@ -220,7 +220,8 @@ export default function FeedbackPageAdmin() {
 				subtitle="Review and respond to user feedback"
 				isSidebarOpen={isSidebarOpen}
 				setIsSidebarOpen={setIsSidebarOpen}
-					bellTo="/admin/news"
+				bellTo="/admin/news"
+				notificationMode="navigate"
 			/>
 
 			<Sidebar
