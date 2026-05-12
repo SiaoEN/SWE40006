@@ -65,7 +65,7 @@ async function resolveActorUsername(db, userId, fallbackUsername = null) {
     return userByName.name;
   }
 
-  return fallbackUsername || userId || "Someone";
+  return fallbackUsername || "Someone";
 }
 
 // Submit restaurant review

@@ -10,8 +10,6 @@ const {
 
 const router = express.Router();
 
-console.log('notificationRoutes module loaded');
-
 /**
  * GET /api/notifications/unread
  * Get unread notifications for the logged-in user

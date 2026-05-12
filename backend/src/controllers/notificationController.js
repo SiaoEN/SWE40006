@@ -50,7 +50,7 @@ async function enrichReviewNotification(notification, usersCollection) {
   }
 
   if (!actorUsername) {
-    actorUsername = notification.message || "Someone";
+    actorUsername = "Someone";
   }
 
   const message = notification.message || "";
@@ -99,6 +99,60 @@ async function enrichNotifications(notifications) {
   }
 
   return enriched;
+}
+
+async function backfillReviewNotificationMessages() {
+  const db = getDb();
+  const notificationsCollection = db.collection("Notifications");
+  const usersCollection = db.collection("User");
+
+  const notifications = await notificationsCollection
+    .find({ type: { $in: ["review_like", "review_dislike"] } })
+    .toArray();
+
+  let updatedCount = 0;
+
+  for (const notification of notifications) {
+    const message = notification.message || "";
+    const actorUserId = notification.actorUserId || getActorUserIdFromMessage(message);
+    let actorUsername = notification.actorUsername || null;
+
+    if (!actorUsername && actorUserId && ObjectId.isValid(actorUserId)) {
+      const actorUser = await usersCollection.findOne({ _id: new ObjectId(actorUserId) });
+      actorUsername = actorUser?.name || null;
+    }
+
+    if (!actorUsername) {
+      continue;
+    }
+
+    const updatedMessage = message && getActorUserIdFromMessage(message)
+      ? message.replace(/^\S+/, actorUsername)
+      : message;
+
+    const needsUpdate =
+      updatedMessage !== message ||
+      notification.actorUsername !== actorUsername ||
+      notification.actorUserId !== actorUserId;
+
+    if (!needsUpdate) {
+      continue;
+    }
+
+    await notificationsCollection.updateOne(
+      { _id: notification._id },
+      {
+        $set: {
+          message: updatedMessage,
+          actorUsername,
+          actorUserId,
+        },
+      }
+    );
+    updatedCount += 1;
+  }
+
+  return updatedCount;
 }
 
 /**
@@ -252,4 +306,5 @@ module.exports = {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
+  backfillReviewNotificationMessages,
 };

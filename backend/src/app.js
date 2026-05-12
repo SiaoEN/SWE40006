@@ -98,8 +98,6 @@ app.post("/api/reviews/:reviewId/clear-reports", reviewController.clearReports);
 // Quick debug route to verify path matching
 app.get('/api/notifications/debug', (_req, res) => res.status(200).json({ success: true, message: 'debug ok' }));
 app.use("/api/notifications", notificationRoutes);
-// Log when notification routes are mounted (helps diagnose 404 issues)
-console.log('Mounted notification routes at /api/notifications');
 
 // Explicit auth routes to avoid router mounting issues in development and production.
 app.post("/api/auth/register", register);
