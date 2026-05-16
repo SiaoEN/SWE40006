@@ -31,7 +31,7 @@ export default function ProfilePage() {
     username: "User",
     email: "",
     bio: "Food explorer around Kuching. Always hunting for the next best meal.",
-    avatar: "https://i.ytimg.com/vi/8BYa0U1h5Fs/sddefault.jpg",
+    avatar: '',
     stats: {
       reviews: 1,
       favorites: 5,
@@ -358,28 +358,61 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // If file is selected, upload it to the server to get a hosted URL
-    const form = new FormData();
-    form.append('avatar', file);
+    // Compress large images client-side to avoid oversized JSON payloads
+    const compressImage = (fileToCompress, maxWidth = 1024, maxHeight = 1024, quality = 0.8) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            let scale = 1;
+            if (width > maxWidth || height > maxHeight) {
+              scale = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * scale);
+              height = Math.round(height * scale);
+            }
 
-    // Optimistic preview while uploading
-    const previewReader = new FileReader();
-    previewReader.onloadend = () => {
-      setFormData(prev => ({ ...prev, avatar: previewReader.result }));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            try {
+              const dataUrl = canvas.toDataURL('image/jpeg', quality);
+              resolve(dataUrl);
+            } catch (err) {
+              // Fallback: return original data URL
+              resolve(reader.result);
+            }
+          };
+          img.onerror = (err) => reject(err);
+          img.src = reader.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(fileToCompress);
+      });
     };
-    previewReader.readAsDataURL(file);
 
     (async () => {
       try {
-        const resp = await api.post('/auth/avatar', form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        if (resp.data && resp.data.success && resp.data.url) {
-          setFormData(prev => ({ ...prev, avatar: resp.data.url }));
+        const shouldCompress = file.size > 200 * 1024; // compress files larger than 200KB
+        if (shouldCompress) {
+          const compressed = await compressImage(file, 1024, 1024, 0.8);
+          setFormData(prev => ({ ...prev, avatar: compressed }));
+        } else {
+          // small files: just read as data URL
+          const reader = new FileReader();
+          reader.onloadend = () => setFormData(prev => ({ ...prev, avatar: reader.result }));
+          reader.readAsDataURL(file);
         }
       } catch (err) {
-        console.error('Avatar upload failed', err);
-        // keep the preview (data URL) as fallback; server-side save will fail later if needed
+        console.error('Image processing failed', err);
+        // fallback to raw data URL
+        const fallbackReader = new FileReader();
+        fallbackReader.onloadend = () => setFormData(prev => ({ ...prev, avatar: fallbackReader.result }));
+        fallbackReader.readAsDataURL(file);
       }
     })();
   };
@@ -412,6 +445,57 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       setError('');
+      console.log('Saving profile, formData:', { username: formData.username, email: formData.email, avatarPreviewLength: formData.avatar ? String(formData.avatar).slice(0,100) : null });
+
+      // Ensure avatar data-URL isn't too large for server JSON limits. Try to recompress if needed.
+      const isDataUrl = (val) => typeof val === 'string' && val.startsWith('data:');
+      const maxChars = 3_800_000; // ~3.8MB threshold for safety against server 5MB limit
+      const recompressDataUrl = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.6) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            let scale = 1;
+            if (width > maxWidth || height > maxHeight) {
+              scale = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * scale);
+              height = Math.round(height * scale);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            try {
+              const newDataUrl = canvas.toDataURL('image/jpeg', quality);
+              resolve(newDataUrl);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          img.onerror = (err) => reject(err);
+          img.src = dataUrl;
+        });
+      };
+
+      if (isDataUrl(formData.avatar) && formData.avatar.length > maxChars) {
+        try {
+          console.log('Avatar too large; attempting recompression before save');
+          const compressed = await recompressDataUrl(formData.avatar, 800, 800, 0.55);
+          // If still too large try lower quality
+          if (compressed.length > maxChars) {
+            const compressed2 = await recompressDataUrl(compressed, 600, 600, 0.45);
+            setFormData((f) => ({ ...f, avatar: compressed2 }));
+          } else {
+            setFormData((f) => ({ ...f, avatar: compressed }));
+          }
+        } catch (err) {
+          console.warn('Recompression failed', err);
+          setError('Selected image is too large. Please choose a smaller image.');
+          setLoading(false);
+          return;
+        }
+      }
 
       const response = await updateUserProfile({
         username: formData.username,
@@ -525,7 +609,11 @@ export default function ProfilePage() {
       />
       {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
       <div className="profile-header">
-        <img src={user.avatar} alt="avatar" className="avatar" />
+        {user.avatar ? (
+          <img src={user.avatar} alt="avatar" className="avatar" />
+        ) : (
+          <div className="avatar-empty" />
+        )}
         <h2 className="username">{user.username}</h2>
         <p className="bio">{user.bio}</p>
 

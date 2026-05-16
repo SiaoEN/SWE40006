@@ -15,7 +15,7 @@ export default function AdminProfilePage() {
   const [admin, setAdminState] = useState({
     username: 'Admin',
     email: '',
-    avatar: 'https://i.ytimg.com/vi/8BYa0U1h5Fs/sddefault.jpg',
+    avatar: '',
   });
 
   const [formData, setFormData] = useState({
@@ -167,7 +167,11 @@ export default function AdminProfilePage() {
       />
       {saveSuccess && <div className="alert alert-success">{saveSuccess}</div>}
       <div className="admin-profile-header">
-        <img src={admin.avatar} alt="admin avatar" className="avatar" />
+        {admin.avatar ? (
+          <img src={admin.avatar} alt="admin avatar" className="avatar" />
+        ) : (
+          <div className="avatar-empty" />
+        )}
         <h2 className="username">{admin.username}</h2>
 
         <button className="edit-btn" onClick={openEditProfile}>

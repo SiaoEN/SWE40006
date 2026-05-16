@@ -7,12 +7,18 @@
 .profile-header {
   text-align: center;
   padding: 30px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .admin-profile-header {
   text-align: center;
   padding-top: 40px;
   padding-bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .avatar {
@@ -21,6 +27,31 @@
   border-radius: 50%;
   margin-bottom: 10px;
   object-fit: cover;
+  display: block;
+}
+
+.avatar-empty {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  background: #f2f2f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.02);
+}
+
+.avatar-empty::before {
+  content: '';
+  width: 44px;
+  height: 44px;
+  display: block;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23bdbdbd'><path d='M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.9;
 }
 
 .username {
