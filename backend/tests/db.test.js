@@ -1,11 +1,22 @@
-const { connectDB } = require("../config/db");
+const { connectDB, getClient } = require("../config/db");
 
-describe("Database Function Test", () => {
+describe("MongoDB Test (CI Safe)", () => {
 
-  test("connectDB function should exist", () => {
+  test("connectDB should not crash in CI", async () => {
+    await connectDB();
 
-    expect(connectDB).toBeDefined();
+    const client = getClient();
 
+    expect(client).toBeDefined();
+  });
+
+  afterAll(async () => {
+    try {
+      const client = getClient();
+      await client.close();
+    } catch (err) {
+      console.log("DB already closed");
+    }
   });
 
 });

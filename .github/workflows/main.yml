@@ -15,11 +15,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js
+      # 2. Setup Node.js (IMPORTANT: match Vite requirement)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       # 3. Install backend dependencies
       - name: Install Backend
@@ -27,8 +27,10 @@ jobs:
           cd backend
           npm install
 
-      # 4. Run backend tests
+      # 4. Run backend tests (with DB secret support)
       - name: Run Backend Tests
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
           cd backend
           npm test
