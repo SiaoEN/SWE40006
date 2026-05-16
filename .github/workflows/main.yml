@@ -35,6 +35,9 @@ jobs:
           cd backend
           npm test
 
+      - name: Check MongoDB Env
+        run: echo "MONGODB_URI is set? ${{ secrets.MONGODB_URI != '' }}"
+
       # 5. Install frontend dependencies
       - name: Install Frontend
         run: |
