@@ -4,7 +4,7 @@ import api from "../services/api";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import { getUserRole } from "../services/auth";
+import { clearAuthToken, getUserRole } from "../services/auth";
 import "../styles/FeedbackPage.css";
 
 export default function FeedbackPage() {
@@ -31,8 +31,7 @@ export default function FeedbackPage() {
 	});
 
 	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	};
 

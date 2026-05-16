@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUserCircle, FaBell, FaUsers, FaComments, FaNewspaper, FaUtensils } from "react-icons/fa";
-import { getUser } from '../services/auth';
+import { clearAuthToken, getUser } from '../services/auth';
 import logo from "../assets/kch-bites-logo.png";
 import logoutIcon from "../assets/logout.png";
 import { useNavigate } from 'react-router-dom';
@@ -49,8 +49,7 @@ export default function AdminPage() {
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        clearAuthToken();
         window.location.href = "/login";
     }
 

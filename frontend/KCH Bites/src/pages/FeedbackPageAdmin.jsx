@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { clearAuthToken } from "../services/auth";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -19,8 +20,7 @@ export default function FeedbackPageAdmin() {
 	const [cardStates, setCardStates] = useState({});
 
 	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	};
 

@@ -1,6 +1,7 @@
 import '../styles/NewsPage.css';
 import { useEffect, useState } from 'react';
 import { requestJson } from '../services/api';
+import { clearAuthToken } from '../services/auth';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -452,8 +453,7 @@ export default function AdminNewsPage() {
   };
 
   const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	}
 

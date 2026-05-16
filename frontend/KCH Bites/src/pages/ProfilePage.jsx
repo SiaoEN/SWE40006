@@ -1,6 +1,7 @@
 import '../styles/ProfilePage.css';
 import { useState, useEffect } from 'react';
-import { getUser, setUser, updateUserProfile } from '../services/auth';
+import { clearAuthToken, getUser, setUser, updateUserProfile } from '../services/auth';
+import { getFavoriteRestaurantIds } from '../services/favorites';
 import api from '../services/api';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
@@ -158,12 +159,7 @@ export default function ProfilePage() {
 
   const fetchFavoriteRestaurants = async () => {
     let favoriteIds = [];
-    try {
-      const parsed = JSON.parse(localStorage.getItem('favoriteRestaurants') || '[]');
-      favoriteIds = Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
-    } catch (err) {
-      favoriteIds = [];
-    }
+    favoriteIds = getFavoriteRestaurantIds();
 
     if (favoriteIds.length === 0) {
       setFavoriteRestaurants([]);
@@ -241,15 +237,17 @@ export default function ProfilePage() {
     };
 
     const favoritesStorageHandler = (event) => {
-      if (!event.key || event.key === 'favoriteRestaurants') {
+      if (!event.key || event.key.startsWith('favoriteRestaurants')) {
         fetchFavoriteRestaurants();
       }
     };
 
     window.addEventListener('userUpdated', handler);
+    window.addEventListener('favoritesUpdated', favoritesStorageHandler);
     window.addEventListener('storage', favoritesStorageHandler);
     return () => {
       window.removeEventListener('userUpdated', handler);
+      window.removeEventListener('favoritesUpdated', favoritesStorageHandler);
       window.removeEventListener('storage', favoritesStorageHandler);
     };
   }, []);
@@ -404,8 +402,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthToken();
     window.location.href = "/login";
   };
 

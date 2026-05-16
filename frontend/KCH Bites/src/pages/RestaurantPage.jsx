@@ -6,7 +6,8 @@ import "leaflet/dist/leaflet.css";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import { getUserRole } from "../services/auth";
+import { clearAuthToken, getUserRole } from "../services/auth";
+import { getFavoriteRestaurantIds, setFavoriteRestaurantIds } from "../services/favorites";
 import "../styles/CommunityPage.css";
 import "../styles/RestaurantPage.css";
 
@@ -60,7 +61,7 @@ export default function RestaurantPage() {
 		if (location.state?.restaurant) {
 			// Load favorite status when restaurant is already provided
 			const resId = location.state.restaurant.id || location.state.restaurant._id;
-			const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+			const favorites = getFavoriteRestaurantIds();
 			setIsFavorite(favorites.includes(String(resId)));
 			return;
 		}
@@ -73,7 +74,7 @@ export default function RestaurantPage() {
 					setRestaurant(response.data.restaurant);
 					// Load favorite status for fetched restaurant
 					const resId = response.data.restaurant.id || response.data.restaurant._id;
-					const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+					const favorites = getFavoriteRestaurantIds();
 					setIsFavorite(favorites.includes(String(resId)));
 				} else {
 					setRestaurant(null);
@@ -168,7 +169,7 @@ export default function RestaurantPage() {
 		const resId = currentRestaurantId;
 		if (!resId) return;
 		
-		const favorites = JSON.parse(localStorage.getItem("favoriteRestaurants") || "[]");
+		const favorites = getFavoriteRestaurantIds();
 		const index = favorites.indexOf(String(resId));
 		
 		if (index > -1) {
@@ -177,13 +178,12 @@ export default function RestaurantPage() {
 			favorites.push(String(resId));
 		}
 		
-		localStorage.setItem("favoriteRestaurants", JSON.stringify(favorites));
+		setFavoriteRestaurantIds(favorites);
 		setIsFavorite(!isFavorite);
 	};
 
 	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	};
 

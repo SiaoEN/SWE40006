@@ -1,6 +1,6 @@
 import '../styles/ProfilePage.css';
 import { useState, useEffect } from 'react';
-import { getUser, setUser, updateUserProfile } from '../services/auth';
+import { clearAuthToken, getUser, setUser, updateUserProfile } from '../services/auth';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
 import Footer from "../components/Footer";
@@ -138,8 +138,7 @@ export default function AdminProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthToken();
     window.location.href = "/login";
   };
 

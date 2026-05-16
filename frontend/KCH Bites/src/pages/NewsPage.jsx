@@ -3,6 +3,7 @@ import '../styles/NewsPage.css';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { clearAuthToken } from '../services/auth';
 
 function formatPublishedDate(value) {
   if (!value) {
@@ -133,8 +134,7 @@ export default function NewsPage() {
   );
 
   const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	}
 

@@ -10,6 +10,7 @@ import FoodWheel from './FoodWheel';
 import { getUserLocation } from '../services/geolocation';
 import { saveUserLocation } from '../services/api';
 import api from '../services/api';
+import { clearAuthToken } from '../services/auth';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -543,8 +544,7 @@ export default function MainPage() {
 	};
 
 	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("user");
+		clearAuthToken();
 		window.location.href = "/login";
 	}
 
