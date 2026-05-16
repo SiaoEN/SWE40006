@@ -38,7 +38,11 @@ export function setUser(user) {
       if (user._id) localStorage.setItem("userId", user._id);
       if (user.role) localStorage.setItem("role", user.role);
       if (user.email) localStorage.setItem("userEmail", user.email);
-      if (user.avatar) localStorage.setItem("avatar", user.avatar);
+      if (user.avatar) {
+        localStorage.setItem("avatar", user.avatar);
+      } else {
+        localStorage.removeItem("avatar");
+      }
     } catch (e) {
       // ignore
     }
@@ -68,6 +72,7 @@ export function clearAuthToken() {
   localStorage.removeItem("userId");
   localStorage.removeItem("username");
   localStorage.removeItem("userFullName");
+  localStorage.removeItem("avatar");
   localStorage.removeItem("user");
   try {
     window.dispatchEvent(new CustomEvent('userUpdated', { detail: null }));

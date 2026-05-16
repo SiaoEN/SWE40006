@@ -445,7 +445,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       setError('');
-      console.log('Saving profile, formData:', { username: formData.username, email: formData.email, avatarPreviewLength: formData.avatar ? String(formData.avatar).slice(0,100) : null });
+      let avatarForSave = formData.avatar;
 
       // Ensure avatar data-URL isn't too large for server JSON limits. Try to recompress if needed.
       const isDataUrl = (val) => typeof val === 'string' && val.startsWith('data:');
@@ -478,17 +478,14 @@ export default function ProfilePage() {
         });
       };
 
-      if (isDataUrl(formData.avatar) && formData.avatar.length > maxChars) {
+      if (isDataUrl(avatarForSave) && avatarForSave.length > maxChars) {
         try {
-          console.log('Avatar too large; attempting recompression before save');
-          const compressed = await recompressDataUrl(formData.avatar, 800, 800, 0.55);
+          const compressed = await recompressDataUrl(avatarForSave, 800, 800, 0.55);
           // If still too large try lower quality
-          if (compressed.length > maxChars) {
-            const compressed2 = await recompressDataUrl(compressed, 600, 600, 0.45);
-            setFormData((f) => ({ ...f, avatar: compressed2 }));
-          } else {
-            setFormData((f) => ({ ...f, avatar: compressed }));
-          }
+          avatarForSave = compressed.length > maxChars
+            ? await recompressDataUrl(compressed, 600, 600, 0.45)
+            : compressed;
+          setFormData((f) => ({ ...f, avatar: avatarForSave }));
         } catch (err) {
           console.warn('Recompression failed', err);
           setError('Selected image is too large. Please choose a smaller image.');
@@ -500,7 +497,7 @@ export default function ProfilePage() {
       const response = await updateUserProfile({
         username: formData.username,
         email: formData.email,
-        avatar: formData.avatar,
+        avatar: avatarForSave,
         bio: formData.bio,
         oldPassword: formData.oldPassword,
         newPassword: formData.newPassword,

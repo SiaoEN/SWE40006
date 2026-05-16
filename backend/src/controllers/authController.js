@@ -90,6 +90,8 @@ exports.login = async (req, res) => {
         _id: user._id.toString(),
         username: user.name,
         email: user.email,
+        avatar: user.avatar || null,
+        bio: user.bio || null,
         role: user.role,
         createdAt: user.createdAt
       }
