@@ -11,6 +11,15 @@ const authenticateToken = require("./middleware/auth");
 
 const app = express();
 
+// Ensure upload directories exist
+const fs = require('fs');
+try {
+  fs.mkdirSync(path.join(__dirname, '../uploads/feedback'), { recursive: true });
+  fs.mkdirSync(path.join(__dirname, '../uploads/avatars'), { recursive: true });
+} catch (err) {
+  console.warn('Could not create upload directories:', err.message);
+}
+
 // Simple request logger to trace incoming requests (temporary debug)
 app.use((req, res, next) => {
   try { console.log('REQ', req.method, req.originalUrl); } catch (e) {}
@@ -48,7 +57,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads/feedback"));
+  cb(null, path.join(__dirname, "../uploads/feedback"));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -69,6 +78,37 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
+
+// Separate storage for avatar uploads
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads/avatars"));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadAvatar = multer({
+  storage: avatarStorage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+// Avatar upload endpoint
+app.post('/api/auth/avatar', authenticateToken, uploadAvatar.single('avatar'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const url = `${protocol}://${host}/uploads/avatars/${req.file.filename}`;
+    return res.status(200).json({ success: true, url });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    return res.status(500).json({ success: false, message: 'Avatar upload failed', error: err.message });
+  }
 });
 
 const feedbackController = require("./controllers/feedbackController");
