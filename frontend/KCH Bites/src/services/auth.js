@@ -124,3 +124,18 @@ export async function updateUserProfile({ username, email, avatar, bio, oldPassw
     body: JSON.stringify({ username, email, avatar, bio, oldPassword, newPassword, confirmNewPassword }),
   });
 }
+
+export async function verifyCurrentPassword(oldPassword) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No token found");
+  }
+
+  return requestJson("/auth/verify-password", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ oldPassword }),
+  });
+}

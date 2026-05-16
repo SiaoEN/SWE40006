@@ -6,7 +6,7 @@ const path = require("path");
 const apiRoutes = require("./routes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
-const { register, login, updateProfile } = require("./controllers/authController");
+const { register, login, updateProfile, verifyCurrentPassword } = require("./controllers/authController");
 const authenticateToken = require("./middleware/auth");
 
 const app = express();
@@ -102,6 +102,7 @@ app.use("/api/notifications", notificationRoutes);
 // Explicit auth routes to avoid router mounting issues in development and production.
 app.post("/api/auth/register", register);
 app.post("/api/auth/login", login);
+app.post("/api/auth/verify-password", authenticateToken, verifyCurrentPassword);
 app.put("/api/auth/profile", authenticateToken, updateProfile);
 
 app.get("/", (_req, res) => {

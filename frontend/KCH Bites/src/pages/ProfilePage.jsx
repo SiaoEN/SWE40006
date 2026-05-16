@@ -1,6 +1,6 @@
 import '../styles/ProfilePage.css';
 import { useState, useEffect } from 'react';
-import { clearAuthToken, getUser, setUser, updateUserProfile } from '../services/auth';
+import { clearAuthToken, getUser, setUser, updateUserProfile, verifyCurrentPassword } from '../services/auth';
 import { getFavoriteRestaurantIds } from '../services/favorites';
 import api from '../services/api';
 import Header from "../components/Header";
@@ -18,6 +18,7 @@ export default function ProfilePage() {
     newPassword: '',
     confirmNewPassword: '',
   });
+  const [oldPasswordChecking, setOldPasswordChecking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState('');
@@ -79,6 +80,30 @@ export default function ProfilePage() {
     return nextErrors;
   };
 
+  const getPasswordFieldFromMessage = (message) => {
+    const normalizedMessage = String(message || '').toLowerCase();
+
+    if (
+      normalizedMessage.includes('old password') ||
+      normalizedMessage.includes('current password') ||
+      normalizedMessage.includes('wrong password') ||
+      normalizedMessage.includes('incorrect password') ||
+      normalizedMessage.includes('invalid credentials')
+    ) {
+      return 'oldPassword';
+    }
+
+    if (
+      normalizedMessage.includes('confirmation password') ||
+      normalizedMessage.includes('confirm new password') ||
+      normalizedMessage.includes('password does not match')
+    ) {
+      return 'confirmNewPassword';
+    }
+
+    return '';
+  };
+
   const getReviewKey = (review) => {
     const rawId = review?.id || review?._id || (review?._id && (review._id.$oid || String(review._id)));
     return rawId ? String(rawId) : '';
@@ -132,9 +157,14 @@ export default function ProfilePage() {
           const reviewUsername = String(review?.username || '').trim().toLowerCase();
 
           const userIdMatch = normalizedUserId && reviewUserId && reviewUserId === normalizedUserId;
-          const usernameMatch = normalizedUsername && reviewUsername && reviewUsername === normalizedUsername;
+          const usernameFallbackMatch =
+            !normalizedUserId &&
+            !reviewUserId &&
+            normalizedUsername &&
+            reviewUsername &&
+            reviewUsername === normalizedUsername;
 
-          return userIdMatch || usernameMatch;
+          return userIdMatch || usernameFallbackMatch;
         })
         .map((review) => ({
           ...review,
@@ -287,11 +317,41 @@ export default function ProfilePage() {
       };
 
       if (name === 'oldPassword' || name === 'newPassword' || name === 'confirmNewPassword') {
-        setPasswordErrors(buildPasswordErrors(nextForm));
+        setPasswordErrors((currentErrors) => ({
+          ...currentErrors,
+          [name]: '',
+        }));
       }
 
       return nextForm;
     });
+  };
+
+  const validateOldPassword = async () => {
+    const oldPassword = formData.oldPassword.trim();
+
+    if (!oldPassword) {
+      return false;
+    }
+
+    try {
+      setOldPasswordChecking(true);
+      await verifyCurrentPassword(oldPassword);
+      setPasswordErrors((currentErrors) => ({
+        ...currentErrors,
+        oldPassword: '',
+      }));
+      return true;
+    } catch (err) {
+      const message = err.message || 'Old password is incorrect';
+      setPasswordErrors((currentErrors) => ({
+        ...currentErrors,
+        oldPassword: message,
+      }));
+      return false;
+    } finally {
+      setOldPasswordChecking(false);
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -324,6 +384,13 @@ export default function ProfilePage() {
     if (nextPasswordErrors.oldPassword || nextPasswordErrors.newPassword || nextPasswordErrors.confirmNewPassword) {
       setPasswordErrors(nextPasswordErrors);
       return;
+    }
+
+    if (formData.oldPassword) {
+      const oldPasswordValid = await validateOldPassword();
+      if (!oldPasswordValid) {
+        return;
+      }
     }
 
     try {
@@ -370,13 +437,24 @@ export default function ProfilePage() {
         setIsEditing(false);
         fetchUserReviews(response.user);
       } else {
-        setError(response.message || 'Failed to update profile');
+        const message = response.message || 'Failed to update profile';
+        const passwordField = getPasswordFieldFromMessage(message);
+
+        if (passwordField) {
+          setPasswordErrors((currentErrors) => ({
+            ...currentErrors,
+            [passwordField]: message,
+          }));
+        }
+
+        setError(message);
       }
     } catch (err) {
-      const message = err.message || 'Error updating profile';
+      const message = err.response?.data?.message || err.message || 'Error updating profile';
       const lowerMessage = String(message).toLowerCase();
+      const passwordField = getPasswordFieldFromMessage(lowerMessage);
 
-      if (lowerMessage.includes('old password')) {
+      if (passwordField === 'oldPassword') {
         setPasswordErrors((currentErrors) => ({
           ...currentErrors,
           oldPassword: message,
@@ -385,7 +463,7 @@ export default function ProfilePage() {
         return;
       }
 
-      if (lowerMessage.includes('confirmation password') || lowerMessage.includes('password does not match')) {
+      if (passwordField === 'confirmNewPassword') {
         setPasswordErrors((currentErrors) => ({
           ...currentErrors,
           newPassword: message,
@@ -547,10 +625,17 @@ export default function ProfilePage() {
               name="oldPassword"
               value={formData.oldPassword}
               onChange={handleChange}
-              disabled={loading}
+              onBlur={validateOldPassword}
+              disabled={loading || oldPasswordChecking}
+              aria-invalid={Boolean(passwordErrors.oldPassword)}
             />
+            {oldPasswordChecking && (
+              <div className="validation-message" style={{ marginBottom: '10px' }}>
+                Checking old password...
+              </div>
+            )}
             {passwordErrors.oldPassword && (
-              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+              <div className="error-message validation-message" style={{ color: 'red', marginBottom: '10px' }}>
                 {passwordErrors.oldPassword}
               </div>
             )}
@@ -562,9 +647,10 @@ export default function ProfilePage() {
               value={formData.newPassword}
               onChange={handleChange}
               disabled={loading}
+              aria-invalid={Boolean(passwordErrors.newPassword)}
             />
             {passwordErrors.newPassword && (
-              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+              <div className="error-message validation-message" style={{ color: 'red', marginBottom: '10px' }}>
                 {passwordErrors.newPassword}
               </div>
             )}
@@ -576,9 +662,10 @@ export default function ProfilePage() {
               value={formData.confirmNewPassword}
               onChange={handleChange}
               disabled={loading}
+              aria-invalid={Boolean(passwordErrors.confirmNewPassword)}
             />
             {passwordErrors.confirmNewPassword && (
-              <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+              <div className="error-message validation-message" style={{ color: 'red', marginBottom: '10px' }}>
                 {passwordErrors.confirmNewPassword}
               </div>
             )}

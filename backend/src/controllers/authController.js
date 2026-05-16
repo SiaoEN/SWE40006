@@ -209,3 +209,40 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Profile update error', error: err.message });
   }
 };
+
+exports.verifyCurrentPassword = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const { oldPassword } = req.body || {};
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!oldPassword) {
+      return res.status(400).json({ success: false, message: 'Old password is required' });
+    }
+
+    const db = getDb();
+    const usersCollection = db.collection('User');
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const currentPassword = user.password || '';
+    const matches = currentPassword.startsWith('$2')
+      ? await bcrypt.compare(oldPassword, currentPassword)
+      : oldPassword === currentPassword;
+
+    if (!matches) {
+      return res.status(400).json({ success: false, message: 'Old password is incorrect' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Old password is correct' });
+  } catch (err) {
+    console.error('Password verification error:', err);
+    return res.status(500).json({ success: false, message: 'Password verification error', error: err.message });
+  }
+};
