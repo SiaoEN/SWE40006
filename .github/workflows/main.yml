@@ -3,40 +3,44 @@ name: KCH Bites CI Pipeline
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
-  basic-check:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-    # Backend setup (safe)
-    - name: Setup Backend
-      run: |
-        if [ -f backend/package.json ]; then
+      # 3. Install backend dependencies
+      - name: Install Backend
+        run: |
           cd backend
           npm install
-        else
-          echo "No backend yet"
-        fi
 
-    # Frontend setup (safe)
-    - name: Setup Frontend
-      run: |
-        if [ -f frontend/package.json ]; then
-          cd frontend
+      # 4. Run backend tests
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          npm test
+
+      # 5. Install frontend dependencies
+      - name: Install Frontend
+        run: |
+          cd frontend\"KCH Bites"
           npm install
-        else
-          echo "No frontend yet"
-        fi
 
-    # Dummy success step
-    - name: Pipeline Status
-      run: echo "CI Pipeline pre-setup completed successfully"
+      # 6. Build frontend
+      - name: Build Frontend
+        run: |
+          cd frontend\"KCH Bites"
+          npm run build
