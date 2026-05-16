@@ -18,7 +18,7 @@ import Footer from '../components/Footer';
 const DEFAULT_FILTERS = {
 	selectedCategories: [],
 	distance: 10,
-	operationHours: "open-now",
+	operationHours: "any",
 	specificTime: "12:00",
 	specificDate: new Date().toISOString().split('T')[0],
 	rating: "none",
@@ -247,6 +247,10 @@ function parseHoursEntry(entry) {
 			return { closed: true };
 		}
 
+		if (/24\s*hours?|open\s*24\s*hours?|always\s*open|open\s*daily|open\s*all\s*day/i.test(trimmed)) {
+			return { openAllDay: true, raw: trimmed };
+		}
+
 		const rangeMatch = trimmed.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
 		if (rangeMatch) {
 			return {
@@ -261,6 +265,7 @@ function parseHoursEntry(entry) {
 	if (typeof entry === "object") {
 		return {
 			closed: Boolean(entry.closed),
+			openAllDay: Boolean(entry.openAllDay),
 			start: parseTimeToMinutes(entry.start || entry.open || entry.from),
 			end: parseTimeToMinutes(entry.end || entry.close || entry.to),
 			raw: entry.raw || null,
@@ -306,30 +311,34 @@ function getOperatingHoursForDay(operatingHours, dayIndex) {
 function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue) {
 	const operatingHours = restaurant?.operatingHours;
 	if (!operatingHours) {
-		return true;
+		return false;
 	}
 
 	const referenceDate = dateValue ? new Date(`${dateValue}T${timeValue || "12:00"}:00`) : new Date();
 	if (Number.isNaN(referenceDate.getTime())) {
-		return true;
+		return false;
 	}
 
 	const dayEntry = getOperatingHoursForDay(operatingHours, referenceDate.getDay());
 	if (!dayEntry) {
-		return true;
+		return false;
 	}
 
 	if (dayEntry.closed) {
 		return false;
 	}
 
-	if (mode === "open-today") {
+	if (dayEntry.openAllDay) {
 		return true;
+	}
+
+	if (mode === "open-today") {
+		return Boolean(dayEntry.start != null || dayEntry.end != null || dayEntry.raw);
 	}
 
 	const targetMinutes = parseTimeToMinutes(timeValue);
 	if (targetMinutes == null) {
-		return true;
+		return false;
 	}
 
 	if (dayEntry.start != null && dayEntry.end != null) {
@@ -345,7 +354,7 @@ function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue) {
 		return cleaned ? !cleaned.includes("closed") : true;
 	}
 
-	return true;
+	return Boolean(dayEntry.raw) && /open|available|daily|all day|24 hours?/i.test(String(dayEntry.raw));
 }
 
 function haversineDistanceKm(from, to) {
@@ -394,7 +403,7 @@ export default function MainPage() {
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [selectedCategories, setSelectedCategories] = useState([]);
 	const [distance, setDistance] = useState(10);
-	const [operationHours, setOperationHours] = useState("open-now");
+	const [operationHours, setOperationHours] = useState("any");
 	const [specificTime, setSpecificTime] = useState("12:00");
 	const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
 	const [rating, setRating] = useState("none");
@@ -500,7 +509,7 @@ export default function MainPage() {
 	const clearFilters = () => {
 		setSelectedCategories([]);
 		setDistance(10);
-		setOperationHours("open-now");
+		setOperationHours("any");
 		setSpecificTime("12:00");
 		setSpecificDate(new Date().toISOString().split('T')[0]);
 		setRating("none");
@@ -517,6 +526,18 @@ export default function MainPage() {
 			rating,
 		});
 		setIsDropdownOpen(false);
+	};
+
+	const handleOperationHoursChange = (nextOperationHours) => {
+		setOperationHours(nextOperationHours);
+		setAppliedFilters({
+			selectedCategories: [...selectedCategories],
+			distance,
+			operationHours: nextOperationHours,
+			specificTime,
+			specificDate,
+			rating,
+		});
 	};
 
 	const handleUseMyLocation = async () => {
@@ -827,9 +848,19 @@ export default function MainPage() {
 											<input
 												type="radio"
 												name="operation-hours"
+												value="any"
+												checked={operationHours === "any"}
+												onChange={() => handleOperationHoursChange("any")}
+											/>
+											<span>Any time</span>
+										</label>
+										<label className="filter-option">
+											<input
+												type="radio"
+												name="operation-hours"
 												value="open-now"
 												checked={operationHours === "open-now"}
-												onChange={() => setOperationHours("open-now")}
+												onChange={() => handleOperationHoursChange("open-now")}
 											/>
 											<span>Open Now</span>
 										</label>
@@ -839,7 +870,7 @@ export default function MainPage() {
 												name="operation-hours"
 												value="open-today"
 												checked={operationHours === "open-today"}
-												onChange={() => setOperationHours("open-today")}
+												onChange={() => handleOperationHoursChange("open-today")}
 											/>
 											<span>Open Today</span>
 										</label>
@@ -849,7 +880,7 @@ export default function MainPage() {
 												name="operation-hours"
 												value="specific-time"
 												checked={operationHours === "specific-time"}
-												onChange={() => setOperationHours("specific-time")}
+												onChange={() => handleOperationHoursChange("specific-time")}
 											/>
 											<span>Choose specific date & time</span>
 										</label>
@@ -861,7 +892,20 @@ export default function MainPage() {
 														type="date"
 														className="date-picker"
 														value={specificDate}
-														onChange={(event) => setSpecificDate(event.target.value)}
+														onChange={(event) => {
+															const nextSpecificDate = event.target.value;
+															setSpecificDate(nextSpecificDate);
+															if (operationHours === "specific-time") {
+																setAppliedFilters({
+																	selectedCategories: [...selectedCategories],
+																	distance,
+																	operationHours,
+																	specificTime,
+																	specificDate: nextSpecificDate,
+																	rating,
+																});
+															}
+														}}
 														aria-label="Specific date filter"
 													/>
 												</div>
@@ -871,7 +915,20 @@ export default function MainPage() {
 														type="time"
 														className="time-picker"
 														value={specificTime}
-														onChange={(event) => setSpecificTime(event.target.value)}
+														onChange={(event) => {
+															const nextSpecificTime = event.target.value;
+															setSpecificTime(nextSpecificTime);
+															if (operationHours === "specific-time") {
+																setAppliedFilters({
+																	selectedCategories: [...selectedCategories],
+																	distance,
+																	operationHours,
+																	specificTime: nextSpecificTime,
+																	specificDate,
+																	rating,
+																});
+															}
+														}}
 														aria-label="Specific time filter"
 													/>
 												</div>

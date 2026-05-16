@@ -356,16 +356,32 @@ export default function ProfilePage() {
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({
-          ...formData,
-          avatar: reader.result, // Store as data URL
+    if (!file) return;
+
+    // If file is selected, upload it to the server to get a hosted URL
+    const form = new FormData();
+    form.append('avatar', file);
+
+    // Optimistic preview while uploading
+    const previewReader = new FileReader();
+    previewReader.onloadend = () => {
+      setFormData(prev => ({ ...prev, avatar: previewReader.result }));
+    };
+    previewReader.readAsDataURL(file);
+
+    (async () => {
+      try {
+        const resp = await api.post('/auth/avatar', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
-      };
-      reader.readAsDataURL(file);
-    }
+        if (resp.data && resp.data.success && resp.data.url) {
+          setFormData(prev => ({ ...prev, avatar: resp.data.url }));
+        }
+      } catch (err) {
+        console.error('Avatar upload failed', err);
+        // keep the preview (data URL) as fallback; server-side save will fail later if needed
+      }
+    })();
   };
 
   const handleSave = async () => {

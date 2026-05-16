@@ -44,14 +44,13 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, handleLogout,
             )}
             <aside className={`sidebar ${isSidebarOpen ? "sidebar--open" : ""}`} aria-label="Main navigation">
                 <div className="profile-section">
-                    <button
-                        type="button"
-                        className="sidebar-profile-button"
-                        onClick={() => setIsSidebarOpen(false)}
-                        aria-label="Close sidebar"
-                    >
-                        <img src={logo} alt="Logo" className="sidebar-logo" />
-                    </button>
+                    <Link to={profileTo} className="sidebar-profile-link" onClick={() => setIsSidebarOpen(false)}>
+                        <img
+                            src={(userState && userState.avatar) || logo}
+                            alt={userName ? `${userName} avatar` : 'Profile'}
+                            className="sidebar-avatar"
+                        />
+                    </Link>
                     {userName ? <h3>{userName}</h3> : null}
                 </div>
 
