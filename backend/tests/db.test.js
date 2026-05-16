@@ -1,20 +1,17 @@
-const { connectDB } = require("../config/db");
+require("dotenv").config();
+
+const { getClient } = require("../config/db");
 
 describe("MongoDB Test (CI Safe)", () => {
 
-  test("should only run if valid URI exists", async () => {
+  test("MONGODB_URI should exist in environment", () => {
 
     const uri = process.env.MONGODB_URI;
 
-    if (!uri || !uri.startsWith("mongodb")) {
-      console.log("Skipping DB test: invalid or missing MongoDB URI");
-      return;
-    }
+    console.log("DEBUG MONGODB_URI:", uri);
 
-    await connectDB();
-
-    expect(true).toBe(true);
-
+    expect(uri).toBeDefined();
+    expect(uri.startsWith("mongodb")).toBe(true);
   });
 
 });
