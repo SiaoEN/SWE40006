@@ -36,11 +36,11 @@ jobs:
       # 5. Install frontend dependencies
       - name: Install Frontend
         run: |
-          cd frontend\"KCH Bites"
+          cd "frontend/KCH Bites"
           npm install
 
       # 6. Build frontend
       - name: Build Frontend
         run: |
-          cd frontend\"KCH Bites"
+          cd "frontend/KCH Bites"
           npm run build
