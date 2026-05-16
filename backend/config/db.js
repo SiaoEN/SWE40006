@@ -4,7 +4,9 @@ let client;
 
 function getDb() {
   if (!client) {
-    throw new Error("Database client is not initialized. Call connectDB() first.");
+    throw new Error(
+      "Database client is not initialized. Call connectDB() first."
+    );
   }
 
   return client.db(process.env.MONGODB_DB_NAME || "KCHBites");
@@ -12,30 +14,44 @@ function getDb() {
 
 function getClient() {
   if (!client) {
-    throw new Error("Database client is not initialized. Call connectDB() first.");
+    throw new Error(
+      "Database client is not initialized. Call connectDB() first."
+    );
   }
+
   return client;
 }
 
 async function getExistingCollection(collectionName) {
   const db = getDb();
+
   const collections = await db.listCollections().toArray();
+
   const exists = collections.some((c) => c.name === collectionName);
-  
+
   if (!exists) {
-    throw new Error(`Collection "${collectionName}" does not exist in the database. Please create it first.`);
+    throw new Error(
+      `Collection "${collectionName}" does not exist in the database. Please create it first.`
+    );
   }
-  
+
   return db.collection(collectionName);
 }
 
 function shouldTryFallback(err) {
-  const dnsSrvCodes = ["ECONNREFUSED", "ENOTFOUND", "ETIMEOUT", "ESERVFAIL"];
+  const dnsSrvCodes = [
+    "ECONNREFUSED",
+    "ENOTFOUND",
+    "ETIMEOUT",
+    "ESERVFAIL",
+  ];
+
   return dnsSrvCodes.includes(err?.code);
 }
 
 async function connectWithUri(uri) {
   client = new MongoClient(uri);
+
   await client.connect();
 }
 
@@ -45,11 +61,17 @@ async function connectDB() {
 
   if (!primaryUri) {
     console.error("Missing MONGODB_URI in environment.");
-    process.exit(1);
+
+    if (process.env.NODE_ENV !== "test") {
+      process.exit(1);
+    }
+
+    throw new Error("Missing MONGODB_URI");
   }
 
   try {
     await connectWithUri(primaryUri);
+
     console.log("Connected to MongoDB Atlas");
   } catch (err) {
     if (shouldTryFallback(err) && fallbackUri) {
@@ -59,16 +81,32 @@ async function connectDB() {
 
       try {
         await connectWithUri(fallbackUri);
+
         console.log("Connected to MongoDB Atlas via fallback URI");
+
         return;
       } catch (fallbackErr) {
-        console.error("MongoDB fallback connection failed:", fallbackErr);
+        console.error(
+          "MongoDB fallback connection failed:",
+          fallbackErr
+        );
       }
     }
 
     console.error(err);
-    process.exit(1); // stop app if DB fails
+
+    // Prevent Jest from crashing
+    if (process.env.NODE_ENV !== "test") {
+      process.exit(1);
+    }
+
+    throw err;
   }
 }
 
-module.exports = { connectDB, getDb, getClient, getExistingCollection };
+module.exports = {
+  connectDB,
+  getDb,
+  getClient,
+  getExistingCollection,
+};
