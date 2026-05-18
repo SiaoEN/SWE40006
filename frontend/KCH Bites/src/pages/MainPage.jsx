@@ -308,18 +308,18 @@ function getOperatingHoursForDay(operatingHours, dayIndex) {
 	return null;
 }
 
-function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue) {
+function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue, referenceDate = new Date()) {
 	const operatingHours = restaurant?.operatingHours;
 	if (!operatingHours) {
 		return false;
 	}
 
-	const referenceDate = dateValue ? new Date(`${dateValue}T${timeValue || "12:00"}:00`) : new Date();
-	if (Number.isNaN(referenceDate.getTime())) {
+	const targetDate = dateValue ? new Date(`${dateValue}T${timeValue || "12:00"}:00`) : referenceDate;
+	if (Number.isNaN(targetDate.getTime())) {
 		return false;
 	}
 
-	const dayEntry = getOperatingHoursForDay(operatingHours, referenceDate.getDay());
+	const dayEntry = getOperatingHoursForDay(operatingHours, targetDate.getDay());
 	if (!dayEntry) {
 		return false;
 	}
@@ -330,6 +330,47 @@ function isRestaurantOpenAt(restaurant, mode, dateValue, timeValue) {
 
 	if (dayEntry.openAllDay) {
 		return true;
+	}
+
+	const currentMinutes = targetDate.getHours() * 60 + targetDate.getMinutes();
+	const entryIsOpenAt = (entry) => {
+		if (!entry || entry.closed) {
+			return false;
+		}
+
+		if (entry.openAllDay) {
+			return true;
+		}
+
+		if (entry.start != null && entry.end != null) {
+			if (entry.start <= entry.end) {
+				return currentMinutes >= entry.start && currentMinutes <= entry.end;
+			}
+
+			return currentMinutes >= entry.start || currentMinutes <= entry.end;
+		}
+
+		if (typeof entry.raw === "string") {
+			const cleaned = normalizeText(entry.raw);
+			return cleaned ? !cleaned.includes("closed") : true;
+		}
+
+		return Boolean(entry.raw) && /open|available|daily|all day|24 hours?/i.test(String(entry.raw));
+	};
+
+	if (mode === "open-now") {
+		if (entryIsOpenAt(dayEntry)) {
+			return true;
+		}
+
+		const previousDay = new Date(targetDate);
+		previousDay.setDate(previousDay.getDate() - 1);
+		const previousDayEntry = getOperatingHoursForDay(operatingHours, previousDay.getDay());
+		if (previousDayEntry?.start != null && previousDayEntry?.end != null && previousDayEntry.start > previousDayEntry.end) {
+			return currentMinutes <= previousDayEntry.end;
+		}
+
+		return false;
 	}
 
 	if (mode === "open-today") {
@@ -408,6 +449,7 @@ export default function MainPage() {
 	const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
 	const [rating, setRating] = useState("none");
 	const [appliedFilters, setAppliedFilters] = useState(null);
+	const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
 
 	// Location-related states
 	const [userLocation, setUserLocation] = useState(null);
@@ -498,6 +540,13 @@ export default function MainPage() {
 		fetchRestaurants();
 	}, []);
 
+	useEffect(() => {
+		const syncClock = () => setCurrentDateTime(new Date());
+		syncClock();
+		const timerId = window.setInterval(syncClock, 30000);
+		return () => window.clearInterval(timerId);
+	}, []);
+
 	const toggleCategory = (category) => {
 		setSelectedCategories((currentCategories) =>
 			currentCategories.includes(category)
@@ -530,6 +579,9 @@ export default function MainPage() {
 
 	const handleOperationHoursChange = (nextOperationHours) => {
 		setOperationHours(nextOperationHours);
+		if (nextOperationHours === "open-now") {
+			setSelectedRestaurant(null);
+		}
 		setAppliedFilters({
 			selectedCategories: [...selectedCategories],
 			distance,
@@ -596,7 +648,7 @@ export default function MainPage() {
 				if (!matchesCategory) return false;
 			}
 
-			if (userPoint && Number.isFinite(appliedFilters.distance)) {
+			if (appliedFilters.operationHours !== "open-now" && userPoint && Number.isFinite(appliedFilters.distance)) {
 				const restaurantPoint = parseCoordinates(restaurant);
 				if (restaurantPoint) {
 					const restaurantDistance = haversineDistanceKm(userPoint, restaurantPoint);
@@ -607,7 +659,7 @@ export default function MainPage() {
 			}
 
 			if (appliedFilters.operationHours === "open-now") {
-				if (!isRestaurantOpenAt(restaurant, "open-now", null, null)) return false;
+				if (!isRestaurantOpenAt(restaurant, "open-now", null, null, currentDateTime)) return false;
 			}
 
 			if (appliedFilters.operationHours === "open-today") {
@@ -627,9 +679,13 @@ export default function MainPage() {
 
 			return true;
 		});
-	}, [appliedFilters, restaurants, userLocation]);
+	}, [appliedFilters, restaurants, userLocation, currentDateTime]);
 
 	const mapRestaurants = useMemo(() => {
+		if (appliedFilters?.operationHours === "open-now") {
+			return filteredRestaurants;
+		}
+
 		if (selectedRestaurant) {
 			return [selectedRestaurant];
 		}
