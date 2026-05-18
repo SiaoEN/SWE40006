@@ -863,7 +863,7 @@ export default function MainPage() {
 									<div className="filter-group">
 										<div className="filter-label">Categories</div>
 										<div className="category-chips" role="group" aria-label="Restaurant categories">
-											{["Western", "Chinese", "Korean", "Local"].map((category) => (
+											{["Western", "Chinese", "Korean", "Local", "Japanese", "Indian", "Halal", "Non-halal", "Desserts"].map((category) => (
 												<button
 													type="button"
 													key={category}
