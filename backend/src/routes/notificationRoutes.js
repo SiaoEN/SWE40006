@@ -15,7 +15,6 @@ const router = express.Router();
  * Get unread notifications for the logged-in user
  */
 router.get("/unread", authenticateToken, async (req, res) => {
-  console.log('notificationRoutes: received GET /unread', req.originalUrl);
   try {
     const userId = req.user.userId || req.user.id;
     const username = req.user.username;

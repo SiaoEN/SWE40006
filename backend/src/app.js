@@ -20,11 +20,7 @@ try {
   console.warn('Could not create upload directories:', err.message);
 }
 
-// Simple request logger to trace incoming requests (temporary debug)
-app.use((req, res, next) => {
-  try { console.log('REQ', req.method, req.originalUrl); } catch (e) {}
-  next();
-});
+// Request logging removed for cleaner terminal output in production/dev
 
 app.use(
   cors({
@@ -160,20 +156,5 @@ app.use("/api", apiRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-// Debug: list registered routes (helps diagnose missing route matches)
-try {
-  if (app._router && Array.isArray(app._router.stack)) {
-    console.log('Registered route layers:');
-    app._router.stack.forEach((layer) => {
-      if (layer.route && layer.route.path) {
-        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
-        console.log(`  route: ${methods} ${layer.route.path}`);
-      } else if (layer.name === 'router' && layer.regexp) {
-        console.log(`  router: ${layer.regexp}`);
-      }
-    });
-  }
-} catch (e) {
-  console.warn('Error while listing routes', e.message);
-}
+// Route-listing debug removed to avoid terminal clutter
 module.exports = app;

@@ -8,10 +8,24 @@ import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import { clearAuthToken, getUserRole } from "../services/auth";
 import { getFavoriteRestaurantIds, setFavoriteRestaurantIds } from "../services/favorites";
+import { getUserLocation } from "../services/geolocation";
 import "../styles/CommunityPage.css";
 import "../styles/RestaurantPage.css";
 
 const ratingLabels = ["Poor", "Fair", "Good", "Very Good", "Excellent"];
+
+function haversineDistanceKm(from, to) {
+	if (!from || !to) return null;
+
+	const toRadians = (value) => (value * Math.PI) / 180;
+	const earthRadiusKm = 6371;
+	const deltaLat = toRadians(to.lat - from.lat);
+	const deltaLng = toRadians(to.lng - from.lng);
+	const lat1 = toRadians(from.lat);
+	const lat2 = toRadians(to.lat);
+	const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+	return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
+}
 
 export default function RestaurantPage() {
 	const navigate = useNavigate();
@@ -36,6 +50,8 @@ export default function RestaurantPage() {
 	const [lightboxPhotos, setLightboxPhotos] = useState([]);
 	const [lightboxIndex, setLightboxIndex] = useState(0);
 	const [lightboxZoom, setLightboxZoom] = useState(1);
+	const [userLocation, setUserLocation] = useState(null);
+	const [locationDenied, setLocationDenied] = useState(false);
 	const [isFavorite, setIsFavorite] = useState(false);
 	const isRegisteredUser = getUserRole() === "user";
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -159,6 +175,48 @@ export default function RestaurantPage() {
 
 		return null;
 	}, [restaurant]);
+
+	const restaurantDistanceText = useMemo(() => {
+		if (!restaurantMapPoint || !userLocation || locationDenied) {
+			return "-";
+		}
+
+		const distanceKm = haversineDistanceKm(
+			{ lat: userLocation.latitude, lng: userLocation.longitude },
+			restaurantMapPoint
+		);
+
+		if (distanceKm == null || !Number.isFinite(distanceKm)) {
+			return "-";
+		}
+
+		return distanceKm < 1
+			? `${Math.round(distanceKm * 1000)} m`
+			: `${distanceKm.toFixed(1)} km`;
+	}, [locationDenied, restaurantMapPoint, userLocation]);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadUserLocation = async () => {
+			try {
+				const location = await getUserLocation();
+				if (!isMounted) return;
+				setUserLocation(location);
+				setLocationDenied(false);
+			} catch (error) {
+				if (!isMounted) return;
+				setUserLocation(null);
+				setLocationDenied(true);
+			}
+		};
+
+		loadUserLocation();
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
 
 	const toggleFavorite = () => {
 		if (!isRegisteredUser) {
@@ -534,7 +592,7 @@ export default function RestaurantPage() {
 					</div>
 					<div className="restaurant-fact">
 						<span>Distance</span>
-						<strong>{restaurant.distance}</strong>
+						<strong>{restaurantDistanceText}</strong>
 					</div>
 				</div>
 			</section>
@@ -580,7 +638,7 @@ export default function RestaurantPage() {
 							<h2>Map preview</h2>
 						</div>
 						<button className="map-legend-chip" type="button" disabled>
-							{restaurant.distance || "-"}
+							{restaurantDistanceText}
 						</button>
 					</div>
 					<div className="restaurant-map-board">
