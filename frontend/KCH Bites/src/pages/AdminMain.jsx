@@ -95,13 +95,23 @@ export default function AdminPage() {
                     <button
                         type="button"
                         className="sidebar-profile-button"
-                        onClick={() => setIsSidebarOpen(false)}
-                        aria-label="Close sidebar"
+                        onClick={() => {
+                            setIsSidebarOpen(false);
+                            navigate("/admin/profile");
+                        }}
+                        aria-label="Open admin profile"
                     >
-                        <img src={logo} alt="Logo" className="sidebar-logo" />
+                        {getUser()?.avatar ? (
+                            <img
+                                src={getUser().avatar}
+                                alt={adminName ? `${adminName} avatar` : "Admin avatar"}
+                                className="sidebar-avatar"
+                            />
+                        ) : (
+                            <div className="sidebar-avatar-empty" aria-hidden="true" />
+                        )}
                     </button>
                     <h3>{adminName}</h3>
-                    
                 </div>
 
                 <div className="side-menu-wrap">
