@@ -89,6 +89,40 @@
 	z-index: 1;
 }
 
+.restaurant-status-badge {
+	display: inline-flex;
+	align-items: center;
+	align-self: flex-start;
+	margin-top: 14px;
+	padding: 8px 12px;
+	border-radius: 999px;
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	border: 1px solid transparent;
+	background: rgba(255, 122, 0, 0.12);
+	color: #b55200;
+}
+
+.restaurant-status-badge--open {
+	background: rgba(46, 125, 50, 0.12);
+	color: #2e7d32;
+	border-color: rgba(46, 125, 50, 0.18);
+}
+
+.restaurant-status-badge--closing-soon {
+	background: rgba(250, 204, 21, 0.18);
+	color: #a16207;
+	border-color: rgba(250, 204, 21, 0.22);
+}
+
+.restaurant-status-badge--closed {
+	background: rgba(239, 68, 68, 0.14);
+	color: #b91c1c;
+	border-color: rgba(239, 68, 68, 0.2);
+}
+
 .restaurant-hero-title-row h1 {
 	margin: 0;
 	color: #4e342e;
@@ -229,6 +263,34 @@
 	font-size: 1rem;
 	line-height: 1.35;
 	white-space: pre-line;
+}
+
+.restaurant-map-status {
+	display: inline-flex;
+	margin: 6px 0;
+	padding: 4px 8px;
+	border-radius: 999px;
+	font-size: 0.7rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	background: rgba(255, 122, 0, 0.12);
+	color: #b55200;
+}
+
+.restaurant-map-status--open {
+	background: rgba(46, 125, 50, 0.12);
+	color: #2e7d32;
+}
+
+.restaurant-map-status--closing-soon {
+	background: rgba(250, 204, 21, 0.18);
+	color: #a16207;
+}
+
+.restaurant-map-status--closed {
+	background: rgba(239, 68, 68, 0.14);
+	color: #b91c1c;
 }
 
 .restaurant-details-grid {

@@ -9,6 +9,7 @@ import Footer from "../components/Footer";
 import { clearAuthToken, getUserRole } from "../services/auth";
 import { getFavoriteRestaurantIds, setFavoriteRestaurantIds } from "../services/favorites";
 import { getUserLocation } from "../services/geolocation";
+import { getRestaurantOperatingStatus } from "../utils/restaurantStatus";
 import "../styles/CommunityPage.css";
 import "../styles/RestaurantPage.css";
 
@@ -292,6 +293,8 @@ export default function RestaurantPage() {
 		return "-";
 	}, [restaurant?.operatingHours]);
 
+	const restaurantOperatingStatus = useMemo(() => getRestaurantOperatingStatus(restaurant), [restaurant]);
+
 	useEffect(() => {
 		const fetchRestaurantReviews = async () => {
 			const routeRestaurantId = String(restaurantId || "").trim();
@@ -351,11 +354,6 @@ export default function RestaurantPage() {
 				setLightboxPhotos([]);
 				setLightboxIndex(0);
 				setLightboxZoom(1);
-			if (!isRegisteredUser) {
-				setError("Please log in as a registered user to post reviews.");
-				navigate("/login");
-				return;
-			}
 			}
 			if (event.key === "ArrowLeft" && lightboxPhotos.length > 0) {
 				setLightboxIndex((prev) => (lightboxPhotos.length <= 1 ? prev : prev === 0 ? lightboxPhotos.length - 1 : prev - 1));
@@ -391,7 +389,7 @@ export default function RestaurantPage() {
 				window.removeEventListener("keydown", handleEscape);
 				window.removeEventListener("wheel", handleWheel);
 			};
-		}
+			}
 	}, [lightboxPhotos.length]);
 
 	const openLightbox = (attachments, index) => {
@@ -572,6 +570,9 @@ export default function RestaurantPage() {
 						<span className="heart-icon">{isFavorite ? "❤️" : "🤍"}</span>
 					</button>
 				</div>
+					<div className={`restaurant-status-badge restaurant-status-badge--${restaurantOperatingStatus.status}`}>
+						{restaurantOperatingStatus.label}
+					</div>
 					<p className="hero-description">{restaurant.description || ""}</p>
 					<div className="restaurant-tag-row">
 						{(restaurant.tags || []).map((tag) => (
@@ -657,6 +658,9 @@ export default function RestaurantPage() {
 								<Marker position={[restaurantMapPoint.lat, restaurantMapPoint.lng]}>
 									<Popup>
 										<strong>{restaurant.name}</strong>
+										<div className={`restaurant-map-status restaurant-map-status--${restaurantOperatingStatus.status}`}>
+											{restaurantOperatingStatus.label}
+										</div>
 										{restaurant.address && <div>{restaurant.address}</div>}
 									</Popup>
 								</Marker>

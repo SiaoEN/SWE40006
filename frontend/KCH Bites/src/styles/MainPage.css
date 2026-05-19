@@ -671,6 +671,35 @@
     white-space: nowrap;
 }
 
+.restaurant-preview-status {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(255, 122, 0, 0.12);
+    color: #b55200;
+}
+
+.restaurant-preview-status--open {
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+}
+
+.restaurant-preview-status--closing-soon {
+    background: rgba(250, 204, 21, 0.18);
+    color: #a16207;
+}
+
+.restaurant-preview-status--closed {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+}
+
 .restaurant-preview-address,
 .restaurant-preview-description,
 .restaurant-preview-hint {
@@ -715,6 +744,36 @@
     display: none;
 }
 
+/* Sidebar overlay and sidebar styles (work on all screen sizes) */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 99;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: 260px;
+    height: 100vh;
+    background: linear-gradient(180deg, #e53935 0%, #c62828 100%);
+    color: #fff3e0;
+    padding: 28px 20px;
+    box-shadow: 8px 0 30px rgba(78, 52, 46, 0.3);
+    border-radius: 0 24px 24px 0;
+    transform: translateX(-100%);
+    transition: transform 260ms ease;
+    pointer-events: none;
+}
+
+.sidebar--open {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
 @media (max-width: 980px) {
     .main-page {
         min-height: 100vh;
@@ -735,37 +794,8 @@
         padding: 24px 20px 32px;
     }
 
-    .sidebar-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.35);
-        z-index: 99;
-    }
-
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 100;
-        width: 260px;
-        height: 100vh;
-        background: linear-gradient(180deg, #e53935 0%, #c62828 100%);
-        color: #fff3e0;
-        padding: 28px 20px;
-        box-shadow: 8px 0 30px rgba(78, 52, 46, 0.3);
-        border-radius: 0 24px 24px 0;
-        transform: translateX(-100%);
-        transition: transform 260ms ease;
-        pointer-events: none;
-    }
-
-    .sidebar--open {
-        transform: translateX(0);
-        pointer-events: auto;
-    }
-
     .side-menu {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: 1fr;
     }
 
     /* 2 columns for category chips on medium screens */
@@ -817,6 +847,10 @@
 
     .side-menu {
         grid-template-columns: 1fr;
+    }
+
+    .side-menu-item {
+        width: 100%;
     }
 
     .search-section {

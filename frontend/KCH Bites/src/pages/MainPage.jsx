@@ -14,6 +14,7 @@ import { clearAuthToken } from '../services/auth';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { getRestaurantOperatingStatus } from '../utils/restaurantStatus';
 
 const DEFAULT_FILTERS = {
 	selectedCategories: [],
@@ -159,11 +160,72 @@ function formatRestaurantRating(restaurant) {
 	return rating == null ? "No rating yet" : `${rating.toFixed(1)} / 5`;
 }
 
-function RestaurantPreviewPopup({ restaurant, coordinates }) {
+function getRestaurantRatingKeys(restaurant) {
+	const keys = [];
+	const rawId = restaurant?.id || restaurant?._id || (restaurant?._id && (restaurant._id.$oid || String(restaurant._id)));
+	if (rawId) {
+		keys.push(String(rawId));
+	}
+
+	const normalizedName = normalizeText(restaurant?.name || "");
+	if (normalizedName) {
+		keys.push(normalizedName);
+	}
+
+	return keys;
+}
+
+function buildRestaurantRatingLookup(reviews = []) {
+	const totals = new Map();
+	const counts = new Map();
+
+	const addRating = (key, rating) => {
+		if (!key || !Number.isFinite(rating)) {
+			return;
+		}
+
+		totals.set(key, (totals.get(key) || 0) + rating);
+		counts.set(key, (counts.get(key) || 0) + 1);
+	};
+
+	reviews.forEach((review) => {
+		const rating = Number(review?.rating);
+		const restaurantId = review?.restaurantId ? String(review.restaurantId).trim() : "";
+		const restaurantName = normalizeText(review?.restaurantName || "");
+
+		if (restaurantId) addRating(restaurantId, rating);
+		if (restaurantName) addRating(restaurantName, rating);
+	});
+
+	const lookup = {};
+	totals.forEach((total, key) => {
+		const count = counts.get(key) || 0;
+		if (count > 0) {
+			lookup[key] = total / count;
+		}
+	});
+
+	return lookup;
+}
+
+function resolveRestaurantRating(restaurant, ratingLookup = {}) {
+	for (const key of getRestaurantRatingKeys(restaurant)) {
+		const lookupRating = Number(ratingLookup[key]);
+		if (Number.isFinite(lookupRating)) {
+			return lookupRating;
+		}
+	}
+
+	return getRestaurantRating(restaurant);
+}
+
+function RestaurantPreviewPopup({ restaurant, coordinates, ratingLookup }) {
 	const previewImage = getRestaurantPreviewImage(restaurant);
 	const previewTags = getRestaurantPreviewTags(restaurant);
 	const previewDescription = getRestaurantPreviewDescription(restaurant);
-	const ratingText = formatRestaurantRating(restaurant);
+	const resolvedRating = resolveRestaurantRating(restaurant, ratingLookup);
+	const ratingText = resolvedRating == null ? "No rating yet" : `${resolvedRating.toFixed(1)} / 5`;
+	const operatingStatus = getRestaurantOperatingStatus(restaurant);
 	const initial = String(restaurant?.name || "R").trim().charAt(0).toUpperCase() || "R";
 
 	return (
@@ -197,6 +259,9 @@ function RestaurantPreviewPopup({ restaurant, coordinates }) {
 							<FaStar aria-hidden="true" />
 							{ratingText}
 						</span>
+					</div>
+					<div className={`restaurant-preview-status restaurant-preview-status--${operatingStatus.status}`}>
+						{operatingStatus.label}
 					</div>
 
 					{restaurant?.address && <p className="restaurant-preview-address">{restaurant.address}</p>}
@@ -457,6 +522,7 @@ export default function MainPage() {
 	const [locationError, setLocationError] = useState(null);
 	const [mapCenter, setMapCenter] = useState([1.5533, 110.3592]);
 	const [restaurants, setRestaurants] = useState([]);
+	const [restaurantRatingsByKey, setRestaurantRatingsByKey] = useState({});
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedRestaurant, setSelectedRestaurant] = useState(null);
 
@@ -538,6 +604,19 @@ export default function MainPage() {
 		};
 
 		fetchRestaurants();
+
+		const fetchReviews = async () => {
+			try {
+				const response = await api.get('/reviews');
+				if (response?.data?.success && Array.isArray(response.data.reviews)) {
+					setRestaurantRatingsByKey(buildRestaurantRatingLookup(response.data.reviews));
+				}
+			} catch (err) {
+				console.warn('Failed to fetch reviews for restaurant ratings:', err.message || err);
+			}
+		};
+
+		fetchReviews();
 	}, []);
 
 	useEffect(() => {
@@ -671,7 +750,7 @@ export default function MainPage() {
 			}
 
 			if (appliedFilters.rating !== "none") {
-				const restaurantRating = getRestaurantRating(restaurant);
+				const restaurantRating = resolveRestaurantRating(restaurant, restaurantRatingsByKey);
 				if (restaurantRating == null || restaurantRating < selectedRating) {
 					return false;
 				}
@@ -679,7 +758,7 @@ export default function MainPage() {
 
 			return true;
 		});
-	}, [appliedFilters, restaurants, userLocation, currentDateTime]);
+	}, [appliedFilters, restaurants, restaurantRatingsByKey, userLocation, currentDateTime]);
 
 	const mapRestaurants = useMemo(() => {
 		if (appliedFilters?.operationHours === "open-now") {
@@ -1012,7 +1091,7 @@ export default function MainPage() {
 												checked={rating === "5"}
 												onChange={() => setRating("5")}
 											/>
-											<span>5★ and above</span>
+											<span>5★</span>
 										</label>
 										<label className="filter-option">
 											<input
@@ -1120,7 +1199,7 @@ export default function MainPage() {
 											click: () => openRestaurantPage(restaurant),
 										}}
 									>
-										<RestaurantPreviewPopup restaurant={restaurant} coordinates={coordinates} />
+										<RestaurantPreviewPopup restaurant={restaurant} coordinates={coordinates} ratingLookup={restaurantRatingsByKey} />
 										<Popup>
 											<div className="marker-popup">
 												<strong>{restaurant.name}</strong>
