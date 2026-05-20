@@ -33,18 +33,38 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
           cd backend
-          npm test
+          npm test -- --coverage
 
       - name: Check MongoDB Env
         run: echo "MONGODB_URI is set? ${{ secrets.MONGODB_URI != '' }}"
 
-      # 5. Install frontend dependencies
+      # 5. Upload backend coverage report
+      - name: Upload Backend Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: backend/coverage
+
+      # 6. Install frontend dependencies
       - name: Install Frontend
         run: |
           cd "frontend/KCH Bites"
           npm install
 
-      # 6. Build frontend
+      # 7. Run frontend tests
+      - name: Run Frontend Tests
+        run: |
+          cd "frontend/KCH Bites"
+          npm test -- --coverage
+
+      # 8. Upload frontend coverage report
+      - name: Upload Frontend Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: "frontend/KCH Bites/coverage"
+
+      # 9. Build frontend (only if tests pass)
       - name: Build Frontend
         run: |
           cd "frontend/KCH Bites"
