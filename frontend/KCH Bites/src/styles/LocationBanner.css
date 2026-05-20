@@ -112,10 +112,52 @@
     font-size: 13px;
 }
 
-.marker-popup strong {
-    display: block;
+.marker-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
     margin-bottom: 6px;
+}
+
+.marker-popup strong {
+    display: inline-block;
+    margin-bottom: 0;
     color: #2e7d32;
+}
+
+.marker-popup-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: rgba(255, 122, 0, 0.12);
+    color: #b55200;
+}
+
+.marker-popup-status--open {
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+}
+
+.marker-popup-status--closing-soon {
+    background: rgba(250, 204, 21, 0.18);
+    color: #a16207;
+}
+
+.marker-popup-status--open-soon {
+    background: rgba(59, 130, 246, 0.14);
+    color: #1d4ed8;
+}
+
+.marker-popup-status--closed {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
 }
 
 .marker-popup p {

@@ -117,6 +117,12 @@
 	border-color: rgba(250, 204, 21, 0.22);
 }
 
+.restaurant-status-badge--open-soon {
+	background: rgba(59, 130, 246, 0.14);
+	color: #1d4ed8;
+	border-color: rgba(59, 130, 246, 0.18);
+}
+
 .restaurant-status-badge--closed {
 	background: rgba(239, 68, 68, 0.14);
 	color: #b91c1c;
@@ -286,6 +292,11 @@
 .restaurant-map-status--closing-soon {
 	background: rgba(250, 204, 21, 0.18);
 	color: #a16207;
+}
+
+.restaurant-map-status--open-soon {
+	background: rgba(59, 130, 246, 0.14);
+	color: #1d4ed8;
 }
 
 .restaurant-map-status--closed {

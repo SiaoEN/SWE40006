@@ -256,14 +256,16 @@ function RestaurantPreviewPopup({ restaurant, coordinates, ratingLookup }) {
 				<div className="restaurant-preview-content">
 					<p className="restaurant-preview-kicker">Restaurant preview</p>
 					<div className="restaurant-preview-title-row">
-						<h4>{restaurant?.name || "Unnamed restaurant"}</h4>
+						<h4 className="restaurant-preview-name">
+							<span className="restaurant-preview-name-text">{restaurant?.name || "Unnamed restaurant"}</span>
+							<span className={`restaurant-preview-status restaurant-preview-status--${operatingStatus.status}`}>
+								{operatingStatus.label}
+							</span>
+						</h4>
 						<span className="restaurant-preview-rating">
 							<FaStar aria-hidden="true" />
 							{ratingText}
 						</span>
-					</div>
-					<div className={`restaurant-preview-status restaurant-preview-status--${operatingStatus.status}`}>
-						{operatingStatus.label}
 					</div>
 
 					{restaurant?.address && <p className="restaurant-preview-address">{restaurant.address}</p>}
@@ -1259,7 +1261,12 @@ export default function MainPage() {
 										<RestaurantPreviewPopup restaurant={restaurant} coordinates={coordinates} ratingLookup={restaurantRatingsByKey} />
 										<Popup>
 											<div className="marker-popup">
-												<strong>{restaurant.name}</strong>
+												<div className="marker-popup-header">
+													<strong>{restaurant.name}</strong>
+													<span className={`marker-popup-status marker-popup-status--${getRestaurantOperatingStatus(restaurant).status}`}>
+														{getRestaurantOperatingStatus(restaurant).label}
+													</span>
+												</div>
 												{restaurant.address && <p>{restaurant.address}</p>}
 												<p>
 													Lat: {coordinates.lat.toFixed(6)}, Lng: {coordinates.lng.toFixed(6)}

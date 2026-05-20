@@ -684,17 +684,26 @@
 
 .restaurant-preview-title-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
 }
 
-.restaurant-preview-title-row h4 {
+.restaurant-preview-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.2;
     font-weight: 800;
     color: #4e342e;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.restaurant-preview-name-text {
+    min-width: 0;
 }
 
 .restaurant-preview-rating {
@@ -730,6 +739,11 @@
 .restaurant-preview-status--closing-soon {
     background: rgba(250, 204, 21, 0.18);
     color: #a16207;
+}
+
+.restaurant-preview-status--open-soon {
+    background: rgba(59, 130, 246, 0.14);
+    color: #1d4ed8;
 }
 
 .restaurant-preview-status--closed {

@@ -96,12 +96,22 @@ function getOperatingHoursForDay(operatingHours, dayIndex) {
 	return null;
 }
 
-function buildStatus(status, minutesUntilClose = null) {
+function buildStatus(status, minutesUntilClose = null, minutesUntilOpen = null) {
 	if (status === "closing-soon") {
 		return {
 			status,
 			label: "Closing soon",
 			minutesUntilClose,
+			minutesUntilOpen: null,
+		};
+	}
+
+	if (status === "open-soon") {
+		return {
+			status,
+			label: "Open soon",
+			minutesUntilClose: null,
+			minutesUntilOpen,
 		};
 	}
 
@@ -110,6 +120,7 @@ function buildStatus(status, minutesUntilClose = null) {
 			status,
 			label: "Open now",
 			minutesUntilClose,
+			minutesUntilOpen,
 		};
 	}
 
@@ -117,6 +128,7 @@ function buildStatus(status, minutesUntilClose = null) {
 		status: "closed",
 		label: "Closed",
 		minutesUntilClose: null,
+		minutesUntilOpen: null,
 	};
 }
 
@@ -136,6 +148,14 @@ function getEntryStatus(entry, currentMinutes) {
 			: currentMinutes >= entry.start && currentMinutes <= entry.end;
 
 		if (!isOpen) {
+			const minutesUntilOpen = currentMinutes < entry.start
+				? entry.start - currentMinutes
+				: null;
+
+			if (minutesUntilOpen != null && minutesUntilOpen <= 60) {
+				return buildStatus("open-soon", null, Math.max(minutesUntilOpen, 0));
+			}
+
 			return buildStatus("closed");
 		}
 
