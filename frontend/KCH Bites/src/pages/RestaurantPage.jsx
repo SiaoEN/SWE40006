@@ -57,6 +57,16 @@ export default function RestaurantPage() {
 	const isRegisteredUser = getUserRole() === "user";
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const reviewActionLabel = openedFromAdmin ? "View all reviews" : "Write a Review";
+	const handleBackNavigation = () => {
+		if (openedFromAdmin) {
+			navigate(backPath);
+			return;
+		}
+
+		navigate(backPath, {
+			state: location.state?.mainPageState ? { mainPageState: location.state.mainPageState } : null,
+		});
+	};
 
 	const getRestaurantKey = (item) => {
 		const rawId = item?.id || item?._id || (item?._id && (item._id.$oid || String(item._id)));
@@ -227,16 +237,16 @@ export default function RestaurantPage() {
 
 		const resId = currentRestaurantId;
 		if (!resId) return;
-		
+
 		const favorites = getFavoriteRestaurantIds();
 		const index = favorites.indexOf(String(resId));
-		
+
 		if (index > -1) {
 			favorites.splice(index, 1);
 		} else {
 			favorites.push(String(resId));
 		}
-		
+
 		setFavoriteRestaurantIds(favorites);
 		setIsFavorite(!isFavorite);
 	};
@@ -389,7 +399,7 @@ export default function RestaurantPage() {
 				window.removeEventListener("keydown", handleEscape);
 				window.removeEventListener("wheel", handleWheel);
 			};
-			}
+		}
 	}, [lightboxPhotos.length]);
 
 	const openLightbox = (attachments, index) => {
@@ -533,14 +543,14 @@ export default function RestaurantPage() {
 			<main className="restaurant-page-shell">
 				<section className="restaurant-hero">
 					<div className="restaurant-hero-copy">
-						<button type="button" className="restaurant-hero-back-btn" onClick={() => navigate(backPath)}>
+						<button type="button" className="restaurant-hero-back-btn" onClick={handleBackNavigation}>
 							<span aria-hidden="true">←</span>
 							{backLabel}
 						</button>
 						<p className="eyebrow">Restaurant not found</p>
 						<h1>We could not load this restaurant.</h1>
 						<p>The selected place is not in the current restaurant list.</p>
-						<button className="restaurant-back-btn" type="button" onClick={() => navigate(backPath)}>
+						<button className="restaurant-back-btn" type="button" onClick={handleBackNavigation}>
 							Back to map
 						</button>
 					</div>
@@ -553,23 +563,23 @@ export default function RestaurantPage() {
 		<main className="restaurant-page-shell">
 			<section className="restaurant-hero">
 				<div className="restaurant-hero-copy">
-					<button type="button" className="restaurant-hero-back-btn" onClick={() => navigate(backPath)}>
+					<button type="button" className="restaurant-hero-back-btn" onClick={handleBackNavigation}>
 						<span aria-hidden="true">←</span>
 						{backLabel}
 					</button>
 					<p className="eyebrow">Restaurant details</p>
-				<div className="restaurant-hero-title-row">
-					<h1>{restaurant.name}</h1>
-					<button
-						type="button"
-						className={`btn-favorite ${isFavorite ? "favorited" : ""}`}
-						onClick={() => (isRegisteredUser ? toggleFavorite() : navigate("/login"))}
-						title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-						aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-					>
-						<span className="heart-icon">{isFavorite ? "❤️" : "🤍"}</span>
-					</button>
-				</div>
+					<div className="restaurant-hero-title-row">
+						<h1>{restaurant.name}</h1>
+						<button
+							type="button"
+							className={`btn-favorite ${isFavorite ? "favorited" : ""}`}
+							onClick={() => (isRegisteredUser ? toggleFavorite() : navigate("/login"))}
+							title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+							aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+						>
+							<span className="heart-icon">{isFavorite ? "❤️" : "🤍"}</span>
+						</button>
+					</div>
 					<div className={`restaurant-status-badge restaurant-status-badge--${restaurantOperatingStatus.status}`}>
 						{restaurantOperatingStatus.label}
 					</div>
@@ -699,7 +709,7 @@ export default function RestaurantPage() {
 					>
 						{reviewActionLabel}
 					</button>
-					<button className="restaurant-back-btn secondary" type="button" onClick={() => navigate(backPath)}>Back to map</button>
+					<button className="restaurant-back-btn secondary" type="button" onClick={handleBackNavigation}>Back to map</button>
 				</div>
 			</section>
 
@@ -862,7 +872,7 @@ export default function RestaurantPage() {
 										{review.attachments.map((attachment, index) => (
 											<img
 												key={index}
-													src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
+												src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
 												alt={attachment.originalName || attachment.filename}
 												referrerPolicy="no-referrer"
 												className="review-photo"
@@ -910,16 +920,16 @@ export default function RestaurantPage() {
 								{lightboxIndex + 1} / {lightboxPhotos.length}
 							</div>
 							<div className="lightbox-zoom-button">
-								<button 
-									type="button" 
-									className="lightbox-lens-btn" 
+								<button
+									type="button"
+									className="lightbox-lens-btn"
 									onClick={zoomIn}
 									title="Click to zoom in (or use trackpad 2-finger scroll to zoom)"
 									aria-label="Zoom lens"
 								>
 									<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="lens-icon">
-										<circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" strokeWidth="2"/>
-										<path d="M15 15l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+										<circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" strokeWidth="2" />
+										<path d="M15 15l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
 										<text x="10" y="13" textAnchor="middle" fontSize="8" fontWeight="bold" fill="currentColor">+</text>
 									</svg>
 									<span className="zoom-level">{(lightboxZoom).toFixed(1)}x</span>

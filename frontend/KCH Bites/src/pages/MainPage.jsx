@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking, FaStar } from "react-icons/fa";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking, FaStar, FaTimes } from "react-icons/fa";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { icon as createLeafletIcon } from "leaflet";
 import "leaflet/dist/leaflet.css"
@@ -24,6 +24,8 @@ const DEFAULT_FILTERS = {
 	specificDate: new Date().toISOString().split('T')[0],
 	rating: "none",
 };
+
+const MAIN_PAGE_STATE_STORAGE_KEY = "kch_bites_main_page_state";
 
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
@@ -505,26 +507,34 @@ function FitRestaurantBounds({ restaurants, fallbackCenter }) {
 
 export default function MainPage() {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const restoredMainPageState = location.state?.mainPageState || (() => {
+		try {
+			return JSON.parse(sessionStorage.getItem(MAIN_PAGE_STATE_STORAGE_KEY) || "null");
+		} catch {
+			return null;
+		}
+	})();
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-	const [selectedCategories, setSelectedCategories] = useState([]);
-	const [distance, setDistance] = useState(10);
-	const [operationHours, setOperationHours] = useState("any");
-	const [specificTime, setSpecificTime] = useState("12:00");
-	const [specificDate, setSpecificDate] = useState(new Date().toISOString().split('T')[0]);
-	const [rating, setRating] = useState("none");
-	const [appliedFilters, setAppliedFilters] = useState(null);
+	const [selectedCategories, setSelectedCategories] = useState(() => restoredMainPageState?.selectedCategories || []);
+	const [distance, setDistance] = useState(() => restoredMainPageState?.distance ?? 10);
+	const [operationHours, setOperationHours] = useState(() => restoredMainPageState?.operationHours || "any");
+	const [specificTime, setSpecificTime] = useState(() => restoredMainPageState?.specificTime || "12:00");
+	const [specificDate, setSpecificDate] = useState(() => restoredMainPageState?.specificDate || new Date().toISOString().split('T')[0]);
+	const [rating, setRating] = useState(() => restoredMainPageState?.rating || "none");
+	const [appliedFilters, setAppliedFilters] = useState(() => restoredMainPageState?.appliedFilters || null);
 	const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
 
 	// Location-related states
 	const [userLocation, setUserLocation] = useState(null);
 	const [locationLoading, setLocationLoading] = useState(false);
 	const [locationError, setLocationError] = useState(null);
-	const [mapCenter, setMapCenter] = useState([1.5533, 110.3592]);
+	const [mapCenter, setMapCenter] = useState(() => restoredMainPageState?.mapCenter || [1.5533, 110.3592]);
 	const [restaurants, setRestaurants] = useState([]);
 	const [restaurantRatingsByKey, setRestaurantRatingsByKey] = useState({});
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+	const [searchQuery, setSearchQuery] = useState(() => restoredMainPageState?.searchQuery || "");
+	const [selectedRestaurant, setSelectedRestaurant] = useState(() => restoredMainPageState?.selectedRestaurant || null);
 
 	const getStoredUserId = () => {
 		const isValid = (value) => {
@@ -564,13 +574,36 @@ export default function MainPage() {
 
 	// Get user location on component mount
 	useEffect(() => {
+		const mainPageState = {
+			selectedCategories,
+			distance,
+			operationHours,
+			specificTime,
+			specificDate,
+			rating,
+			appliedFilters,
+			mapCenter,
+			searchQuery,
+			selectedRestaurant,
+		};
+
+		try {
+			sessionStorage.setItem(MAIN_PAGE_STATE_STORAGE_KEY, JSON.stringify(mainPageState));
+		} catch {
+			// ignore storage failures
+		}
+	}, [selectedCategories, distance, operationHours, specificTime, specificDate, rating, appliedFilters, mapCenter, searchQuery, selectedRestaurant]);
+
+	useEffect(() => {
 		const initializeLocation = async () => {
 			setLocationLoading(true);
 			setLocationError(null);
 			try {
 				const location = await getUserLocation();
 				setUserLocation(location);
-				setMapCenter([location.latitude, location.longitude]);
+				if (!restoredMainPageState?.mapCenter && !restoredMainPageState?.selectedRestaurant) {
+					setMapCenter([location.latitude, location.longitude]);
+				}
 
 				// Try to save location to backend
 				try {
@@ -617,7 +650,7 @@ export default function MainPage() {
 		};
 
 		fetchReviews();
-	}, []);
+	}, [restoredMainPageState?.mapCenter, restoredMainPageState?.selectedRestaurant]);
 
 	useEffect(() => {
 		const syncClock = () => setCurrentDateTime(new Date());
@@ -707,7 +740,21 @@ export default function MainPage() {
 		if (!restaurantId) return;
 
 		navigate(`/restaurant/${restaurantId}`, {
-			state: { restaurant },
+			state: {
+				restaurant,
+				mainPageState: {
+					selectedCategories,
+					distance,
+					operationHours,
+					specificTime,
+					specificDate,
+					rating,
+					appliedFilters,
+					mapCenter,
+					searchQuery,
+					selectedRestaurant,
+				},
+			},
 		});
 	};
 
@@ -905,8 +952,18 @@ export default function MainPage() {
 							<div className="dropdown-menu">
 								<div className="dropdown-body">
 									<div className="dropdown-header">
-										<h5>Filter Search</h5>
-										<p>Refine results by category, distance, time, and rating.</p>
+										<div className="dropdown-header-copy">
+											<h5>Filter Search</h5>
+											<p>Refine results by category, distance, time, and rating.</p>
+										</div>
+										<button
+											type="button"
+											className="filter-close-button"
+											onClick={() => setIsDropdownOpen(false)}
+											aria-label="Close filters"
+										>
+											<FaTimes aria-hidden="true" />
+										</button>
 									</div>
 
 									{locationError && (

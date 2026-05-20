@@ -373,6 +373,43 @@
     line-height: 1.45;
 }
 
+.dropdown-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dropdown-header-copy {
+    min-width: 0;
+}
+
+.filter-close-button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(78, 52, 46, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #4e342e;
+    cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.filter-close-button:hover {
+    transform: translateY(-1px);
+    background: #fff3e0;
+    border-color: rgba(229, 57, 53, 0.35);
+}
+
+.filter-close-button:focus-visible {
+    outline: 2px solid rgba(229, 57, 53, 0.35);
+    outline-offset: 2px;
+}
+
 .filter-group {
     display: grid;
     gap: 10px;
