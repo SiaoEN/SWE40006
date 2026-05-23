@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBell, FaFilter, FaMapMarkerAlt, FaEnvelope, FaFacebook, FaInstagram, FaTwitter, FaSync, FaSpinner, FaWalking, FaStar, FaTimes } from "react-icons/fa";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -510,13 +510,13 @@ function FitRestaurantBounds({ restaurants, fallbackCenter }) {
 export default function MainPage() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const restoredMainPageState = location.state?.mainPageState || (() => {
+	const restoredMainPageState = useMemo(() => location.state?.mainPageState || (() => {
 		try {
 			return JSON.parse(sessionStorage.getItem(MAIN_PAGE_STATE_STORAGE_KEY) || "null");
 		} catch {
 			return null;
 		}
-	})();
+	})(), [location.state?.mainPageState]);
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [selectedCategories, setSelectedCategories] = useState(() => restoredMainPageState?.selectedCategories || []);
@@ -538,7 +538,7 @@ export default function MainPage() {
 	const [searchQuery, setSearchQuery] = useState(() => restoredMainPageState?.searchQuery || "");
 	const [selectedRestaurant, setSelectedRestaurant] = useState(() => restoredMainPageState?.selectedRestaurant || null);
 
-	const getStoredUserId = () => {
+	const getStoredUserId = useCallback(() => {
 		const isValid = (value) => {
 			const text = String(value || "").trim();
 			return Boolean(text) && !["anonymous", "user_temp", "null", "undefined"].includes(text.toLowerCase());
@@ -572,7 +572,18 @@ export default function MainPage() {
 		}
 
 		return null;
-	};
+	}, []);
+
+	const persistUserLocation = useCallback(async (location) => {
+		try {
+			const userId = getStoredUserId();
+			if (userId) {
+				await saveUserLocation(userId, location.latitude, location.longitude);
+			}
+		} catch (apiError) {
+			console.warn('Could not save location to backend:', apiError.message);
+		}
+	}, [getStoredUserId]);
 
 	// Get user location on component mount
 	useEffect(() => {
@@ -607,15 +618,8 @@ export default function MainPage() {
 					setMapCenter([location.latitude, location.longitude]);
 				}
 
-				// Try to save location to backend
-				try {
-					const userId = getStoredUserId();
-					if (userId) {
-						await saveUserLocation(userId, location.latitude, location.longitude);
-					}
-				} catch (apiError) {
-					console.warn('Could not save location to backend:', apiError.message);
-				}
+				setLocationLoading(false);
+				await persistUserLocation(location);
 			} catch (error) {
 				setLocationError(error.message);
 				console.warn('Geolocation not available, using default location');
@@ -652,7 +656,7 @@ export default function MainPage() {
 		};
 
 		fetchReviews();
-	}, [restoredMainPageState?.mapCenter, restoredMainPageState?.selectedRestaurant]);
+	}, [persistUserLocation, restoredMainPageState?.mapCenter, restoredMainPageState?.selectedRestaurant]);
 
 	useEffect(() => {
 		const syncClock = () => setCurrentDateTime(new Date());
@@ -714,15 +718,8 @@ export default function MainPage() {
 			setUserLocation(location);
 			setMapCenter([location.latitude, location.longitude]);
 
-			// Save location to backend
-			try {
-				const userId = getStoredUserId();
-				if (userId) {
-					await saveUserLocation(userId, location.latitude, location.longitude);
-				}
-			} catch (apiError) {
-				console.warn('Could not save location to backend:', apiError.message);
-			}
+			setLocationLoading(false);
+			await persistUserLocation(location);
 		} catch (error) {
 			setLocationError(error.message);
 		} finally {
