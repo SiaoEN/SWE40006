@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { UPLOADS_BASE_URL } from "../services/api";
 import { clearAuthToken } from "../services/auth";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
@@ -282,7 +283,7 @@ export default function FeedbackPageAdmin() {
 											{feedback.attachments.map((att, idx) => (
 												<a
 													key={idx}
-													href={`http://localhost:5000/uploads/feedback/${att.filename}`}
+													href={`${UPLOADS_BASE_URL}/feedback/${att.filename}`}
 													target="_blank"
 													rel="noopener noreferrer"
 													className="attachment-tag"

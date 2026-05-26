@@ -4,6 +4,7 @@ import api from "../services/api";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import { UPLOADS_BASE_URL } from "../services/api";
 import { clearAuthToken, getUserRole } from "../services/auth";
 import "../styles/FeedbackPage.css";
 
@@ -458,7 +459,7 @@ export default function FeedbackPage() {
 											{feedback.attachments.map((att, idx) => (
 												<a
 													key={idx}
-													href={`http://localhost:5000/uploads/feedback/${att.filename}`}
+													href={`${UPLOADS_BASE_URL}/feedback/${att.filename}`}
 													target="_blank"
 													rel="noopener noreferrer"
 													className="attachment-tag"

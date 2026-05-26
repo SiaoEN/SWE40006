@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { UPLOADS_BASE_URL } from "../services/api";
 import { clearAuthToken } from "../services/auth";
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -101,7 +102,7 @@ export default function CommunityPageAdmin() {
   // Lightbox controls
   const openLightbox = (attachments, index) => {
     const photos = attachments.map((att) => ({
-      src: `http://localhost:5000/uploads/feedback/${att.filename}`,
+      src: `${UPLOADS_BASE_URL}/feedback/${att.filename}`,
       alt: att.originalName || att.filename,
     }));
     setLightboxPhotos(photos);
@@ -230,7 +231,7 @@ export default function CommunityPageAdmin() {
                   {review.attachments.map((att, idx) => (
                     <img
                       key={idx}
-                      src={`http://localhost:5000/uploads/feedback/${att.filename}`}
+                      src={`${UPLOADS_BASE_URL}/feedback/${att.filename}`}
                       alt={att.originalName || att.filename}
                       className="review-photo"
                       onClick={() => openLightbox(review.attachments, idx)}

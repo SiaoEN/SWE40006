@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import { UPLOADS_BASE_URL } from "../services/api";
 import { clearAuthToken, getUserRole } from "../services/auth";
 import { getFavoriteRestaurantIds, setFavoriteRestaurantIds } from "../services/favorites";
 import { getUserLocation } from "../services/geolocation";
@@ -138,7 +139,7 @@ export default function RestaurantPage() {
 					photo?.src ||
 					photo?.url ||
 					photo?.path ||
-					(photo?.filename ? `http://localhost:5000/uploads/feedback/${photo.filename}` : "");
+					(photo?.filename ? `${UPLOADS_BASE_URL}/feedback/${photo.filename}` : "");
 
 				if (!resolvedSrc) {
 					return null;
@@ -412,7 +413,7 @@ export default function RestaurantPage() {
 					};
 				}
 
-				const resolvedSrc = attachment?.src || (attachment?.filename ? `http://localhost:5000/uploads/feedback/${attachment.filename}` : "");
+				const resolvedSrc = attachment?.src || (attachment?.filename ? `${UPLOADS_BASE_URL}/feedback/${attachment.filename}` : "");
 				if (!resolvedSrc) {
 					return null;
 				}
@@ -872,7 +873,7 @@ export default function RestaurantPage() {
 										{review.attachments.map((attachment, index) => (
 											<img
 												key={index}
-												src={`http://localhost:5000/uploads/feedback/${attachment.filename}`}
+												src={`${UPLOADS_BASE_URL}/feedback/${attachment.filename}`}
 												alt={attachment.originalName || attachment.filename}
 												referrerPolicy="no-referrer"
 												className="review-photo"

@@ -14,6 +14,7 @@ import { clearAuthToken } from '../services/auth';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { UPLOADS_BASE_URL } from '../services/api';
 import { getRestaurantOperatingStatus } from '../utils/restaurantStatus';
 
 const DEFAULT_FILTERS = {
@@ -118,7 +119,7 @@ function getRestaurantMedia(restaurant) {
 				item?.src ||
 				item?.url ||
 				item?.path ||
-				(item?.filename ? `http://localhost:5000/uploads/feedback/${item.filename}` : "");
+				(item?.filename ? `${UPLOADS_BASE_URL}/feedback/${item.filename}` : "");
 
 			if (!resolvedSrc) {
 				return null;
