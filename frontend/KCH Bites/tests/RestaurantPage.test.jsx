@@ -36,6 +36,10 @@ vi.mock('../src/services/api', () => ({
 vi.mock('../src/services/favorites', () => ({
   getFavoriteRestaurantIds: vi.fn(),
   setFavoriteRestaurantIds: vi.fn(),
+  getFavoriteRestaurantDetails: vi.fn().mockReturnValue([]),
+  setFavoriteRestaurantDetails: vi.fn(),
+  saveFavoriteRestaurantIdsToServer: vi.fn().mockResolvedValue([]),
+  fetchFavoriteRestaurantIdsFromServer: vi.fn().mockResolvedValue([]),
 }))
 
 // Mock react-leaflet to render children so map popups and markers appear in DOM

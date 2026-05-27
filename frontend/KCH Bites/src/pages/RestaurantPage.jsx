@@ -520,12 +520,6 @@ export default function RestaurantPage() {
 		setLightboxZoom(1);
 	};
 
-
-		try {
-			await saveFavoriteRestaurantIdsToServer(nextFavorites);
-		} catch (err) {
-			console.warn("Failed to sync favorites to server:", err.message || err);
-		}
 	const handleFileChange = (event) => {
 		const files = Array.from(event.target.files);
 		setReviewForm((prev) => ({
