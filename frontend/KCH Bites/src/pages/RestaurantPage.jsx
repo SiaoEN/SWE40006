@@ -8,7 +8,14 @@ import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import { UPLOADS_BASE_URL } from "../services/api";
 import { clearAuthToken, getUserRole } from "../services/auth";
-import { getFavoriteRestaurantIds, setFavoriteRestaurantIds } from "../services/favorites";
+import {
+	getFavoriteRestaurantDetails,
+	getFavoriteRestaurantIds,
+	fetchFavoriteRestaurantIdsFromServer,
+	saveFavoriteRestaurantIdsToServer,
+	setFavoriteRestaurantDetails,
+	setFavoriteRestaurantIds,
+} from "../services/favorites";
 import { getUserLocation } from "../services/geolocation";
 import { getRestaurantOperatingStatus } from "../utils/restaurantStatus";
 import "../styles/CommunityPage.css";
@@ -86,12 +93,28 @@ export default function RestaurantPage() {
 
 	// Fetch restaurant by ID if not provided via navigation state
 	useEffect(() => {
+		let isMounted = true;
+
+		const syncFavoriteStatus = async (restaurantIdToCheck) => {
+			try {
+				const favoriteIds = await fetchFavoriteRestaurantIdsFromServer();
+				if (!isMounted || !restaurantIdToCheck) return;
+
+				setIsFavorite(favoriteIds.includes(String(restaurantIdToCheck)));
+			} catch {
+				// keep the local cache value if the backend is unavailable
+			}
+		};
+
 		if (location.state?.restaurant) {
 			// Load favorite status when restaurant is already provided
 			const resId = location.state.restaurant.id || location.state.restaurant._id;
 			const favorites = getFavoriteRestaurantIds();
 			setIsFavorite(favorites.includes(String(resId)));
-			return;
+			syncFavoriteStatus(resId);
+			return () => {
+				isMounted = false;
+			};
 		}
 
 		async function fetchRestaurant() {
@@ -104,6 +127,7 @@ export default function RestaurantPage() {
 					const resId = response.data.restaurant.id || response.data.restaurant._id;
 					const favorites = getFavoriteRestaurantIds();
 					setIsFavorite(favorites.includes(String(resId)));
+					syncFavoriteStatus(resId);
 				} else {
 					setRestaurant(null);
 				}
@@ -118,6 +142,10 @@ export default function RestaurantPage() {
 		}
 
 		fetchRestaurant();
+
+		return () => {
+			isMounted = false;
+		};
 	}, [restaurantId, location.state?.restaurant]);
 	const restaurantPhotos = useMemo(() => {
 		const rawPhotos = restaurant?.images?.length
@@ -230,7 +258,7 @@ export default function RestaurantPage() {
 		};
 	}, []);
 
-	const toggleFavorite = () => {
+	const toggleFavorite = async () => {
 		if (!isRegisteredUser) {
 			navigate("/login");
 			return;
@@ -241,14 +269,38 @@ export default function RestaurantPage() {
 
 		const favorites = getFavoriteRestaurantIds();
 		const index = favorites.indexOf(String(resId));
+		const nextFavorites = [...favorites];
 
 		if (index > -1) {
-			favorites.splice(index, 1);
+			nextFavorites.splice(index, 1);
 		} else {
-			favorites.push(String(resId));
+			nextFavorites.push(String(resId));
 		}
 
-		setFavoriteRestaurantIds(favorites);
+		setFavoriteRestaurantIds(nextFavorites);
+
+		const favoriteDetailsById = new Map(
+			getFavoriteRestaurantDetails().map((favoriteRestaurant) => [String(favoriteRestaurant.id || favoriteRestaurant._id || ""), favoriteRestaurant])
+		);
+
+		if (index < 0 && restaurant) {
+			favoriteDetailsById.set(String(resId), {
+				...restaurant,
+				id: String(resId),
+			});
+		}
+
+		setFavoriteRestaurantDetails(
+			nextFavorites
+				.map((favoriteId) => favoriteDetailsById.get(String(favoriteId)))
+				.filter(Boolean)
+		);
+
+		try {
+			await saveFavoriteRestaurantIdsToServer(nextFavorites);
+		} catch (err) {
+			console.warn("Failed to sync favorites to server:", err.message || err);
+		}
 		setIsFavorite(!isFavorite);
 	};
 
@@ -468,6 +520,12 @@ export default function RestaurantPage() {
 		setLightboxZoom(1);
 	};
 
+
+		try {
+			await saveFavoriteRestaurantIdsToServer(nextFavorites);
+		} catch (err) {
+			console.warn("Failed to sync favorites to server:", err.message || err);
+		}
 	const handleFileChange = (event) => {
 		const files = Array.from(event.target.files);
 		setReviewForm((prev) => ({

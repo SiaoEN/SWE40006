@@ -1,7 +1,7 @@
 import '../styles/ProfilePage.css';
 import { useState, useEffect } from 'react';
 import { clearAuthToken, getUser, setUser, updateUserProfile, verifyCurrentPassword } from '../services/auth';
-import { getFavoriteRestaurantIds } from '../services/favorites';
+import { fetchFavoriteRestaurantIdsFromServer, getFavoriteRestaurantIds } from '../services/favorites';
 import api from '../services/api';
 import Header from "../components/Header";
 import Sidebar from '../components/Sidebar';
@@ -187,20 +187,18 @@ export default function ProfilePage() {
     }
   };
 
-  const fetchFavoriteRestaurants = async () => {
-    let favoriteIds = [];
-    favoriteIds = getFavoriteRestaurantIds();
-
-    if (favoriteIds.length === 0) {
-      setFavoriteRestaurants([]);
-      setFavoritesError('');
-      setFavoritesLoading(false);
-      return;
-    }
+  const loadFavoriteRestaurants = async () => {
+    setFavoritesLoading(true);
+    setFavoritesError('');
 
     try {
-      setFavoritesLoading(true);
-      setFavoritesError('');
+      const favoriteIds = await fetchFavoriteRestaurantIdsFromServer();
+      const fallbackFavoriteIds = favoriteIds.length > 0 ? favoriteIds : getFavoriteRestaurantIds();
+
+      if (fallbackFavoriteIds.length === 0) {
+        setFavoriteRestaurants([]);
+        return;
+      }
 
       const response = await api.get('/restaurants');
       if (!response.data?.success) {
@@ -214,15 +212,39 @@ export default function ProfilePage() {
         restaurants.map((restaurant) => [getRestaurantKey(restaurant), restaurant])
       );
 
-      const orderedFavorites = favoriteIds
+      const orderedFavorites = fallbackFavoriteIds
         .map((id) => restaurantById.get(id))
         .filter(Boolean);
 
       setFavoriteRestaurants(orderedFavorites);
     } catch (err) {
-      console.error('Error fetching favorite restaurants:', err);
-      setFavoritesError('Unable to load your favorite restaurants right now');
-      setFavoriteRestaurants([]);
+      console.error('Error loading favorites:', err);
+      const favoriteIds = getFavoriteRestaurantIds();
+
+      if (favoriteIds.length === 0) {
+        setFavoritesError('Unable to load your favorite restaurants right now');
+        setFavoriteRestaurants([]);
+        return;
+      }
+
+      try {
+        const response = await api.get('/restaurants');
+        const restaurants = Array.isArray(response.data?.restaurants) ? response.data.restaurants : [];
+        const restaurantById = new Map(
+          restaurants.map((restaurant) => [getRestaurantKey(restaurant), restaurant])
+        );
+
+        const orderedFavorites = favoriteIds
+          .map((id) => restaurantById.get(id))
+          .filter(Boolean);
+
+        setFavoriteRestaurants(orderedFavorites);
+        setFavoritesError('');
+      } catch (fallbackErr) {
+        console.error('Fallback favorites load failed:', fallbackErr);
+        setFavoritesError('Unable to load your favorite restaurants right now');
+        setFavoriteRestaurants([]);
+      }
     } finally {
       setFavoritesLoading(false);
     }
@@ -252,10 +274,10 @@ export default function ProfilePage() {
         }));
 
         fetchUserReviews(storedUser);
-        fetchFavoriteRestaurants();
+        loadFavoriteRestaurants();
       } else {
         setUserReviews([]);
-        fetchFavoriteRestaurants();
+        loadFavoriteRestaurants();
       }
     };
     
@@ -268,7 +290,7 @@ export default function ProfilePage() {
 
     const favoritesStorageHandler = (event) => {
       if (!event.key || event.key.startsWith('favoriteRestaurants')) {
-        fetchFavoriteRestaurants();
+        loadFavoriteRestaurants();
       }
     };
 
