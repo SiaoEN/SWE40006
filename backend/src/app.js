@@ -6,7 +6,7 @@ const path = require("path");
 const apiRoutes = require("./routes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
-const { register, login, updateProfile, verifyCurrentPassword } = require("./controllers/authController");
+const { register, login, updateProfile, verifyCurrentPassword, getFavorites, updateFavorites } = require("./controllers/authController");
 const authenticateToken = require("./middleware/auth");
 
 const app = express();
@@ -140,6 +140,8 @@ app.post("/api/auth/register", register);
 app.post("/api/auth/login", login);
 app.post("/api/auth/verify-password", authenticateToken, verifyCurrentPassword);
 app.put("/api/auth/profile", authenticateToken, updateProfile);
+app.get("/api/auth/favorites", authenticateToken, getFavorites);
+app.put("/api/auth/favorites", authenticateToken, updateFavorites);
 
 app.get("/", (_req, res) => {
   res.status(200).json({

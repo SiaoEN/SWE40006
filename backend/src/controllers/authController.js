@@ -4,6 +4,37 @@ const { ObjectId } = require('mongodb');
 const { jwtSecret, jwtExpiresIn } = require('../../config/auth');
 const { getDb } = require('../../config/db');
 
+function normalizeFavoriteIds(favorites) {
+  if (!Array.isArray(favorites)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      favorites
+        .map((favoriteId) => String(favoriteId || '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function serializeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    _id: user._id.toString(),
+    username: user.name,
+    email: user.email,
+    avatar: user.avatar || null,
+    bio: user.bio || null,
+    favorites: normalizeFavoriteIds(user.favorites),
+    role: user.role,
+    createdAt: user.createdAt,
+  };
+}
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -30,6 +61,7 @@ exports.register = async (req, res) => {
       email: email || '',
       password: passwordHash,
       role: 'user',
+      favorites: [],
       createdAt: new Date(),
     };
 
@@ -86,15 +118,7 @@ exports.login = async (req, res) => {
     res.status(200).json({ 
       success: true, 
       token,
-      user: {
-        _id: user._id.toString(),
-        username: user.name,
-        email: user.email,
-        avatar: user.avatar || null,
-        bio: user.bio || null,
-        role: user.role,
-        createdAt: user.createdAt
-      }
+      user: serializeUser(user)
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -196,19 +220,73 @@ exports.updateProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      user: {
-        _id: updatedUser._id.toString(),
-        username: updatedUser.name,
-        email: updatedUser.email,
-        avatar: updatedUser.avatar || null,
-        bio: updatedUser.bio || null,
-        role: updatedUser.role,
-        createdAt: updatedUser.createdAt,
-      }
+      user: serializeUser(updatedUser)
     });
   } catch (err) {
     console.error('Profile update error:', err);
     res.status(500).json({ success: false, message: 'Profile update error', error: err.message });
+  }
+};
+
+exports.getFavorites = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const db = getDb();
+    const usersCollection = db.collection('User');
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      favorites: normalizeFavoriteIds(user.favorites),
+    });
+  } catch (err) {
+    console.error('Favorites fetch error:', err);
+    return res.status(500).json({ success: false, message: 'Favorites fetch error', error: err.message });
+  }
+};
+
+exports.updateFavorites = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const body = req.body || {};
+    const favorites = normalizeFavoriteIds(body.favorites || body.favoriteIds || []);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const db = getDb();
+    const usersCollection = db.collection('User');
+
+    const result = await usersCollection.findOneAndUpdate(
+      { _id: new ObjectId(userId) },
+      { $set: { favorites } },
+      { returnDocument: 'after' }
+    );
+
+    const updatedUser = result?.value || result;
+
+    if (!updatedUser || !updatedUser._id) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      favorites: normalizeFavoriteIds(updatedUser.favorites),
+      user: serializeUser(updatedUser),
+    });
+  } catch (err) {
+    console.error('Favorites update error:', err);
+    return res.status(500).json({ success: false, message: 'Favorites update error', error: err.message });
   }
 };
 

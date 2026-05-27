@@ -131,4 +131,61 @@ describe('Auth API', () => {
     });
     expect(feedbackCollection.updateMany).toHaveBeenCalledTimes(1);
   });
+
+  test('returns the authenticated user favorites', async () => {
+    const userId = '507f1f77bcf86cd799439011';
+    const token = jwt.sign({ userId, username: 'testuser', role: 'user' }, jwtSecret, { expiresIn: '1h' });
+    const usersCollection = createMockCollection({
+      findOneResult: {
+        _id: userId,
+        name: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        favorites: ['rest-1', 'rest-2'],
+        role: 'user',
+        createdAt: new Date('2026-05-19T00:00:00.000Z'),
+      },
+    });
+    dbModule.getDb.mockReturnValue(createMockDb({ User: usersCollection }));
+
+    const response = await request(app)
+      .get('/api/auth/favorites')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      favorites: ['rest-1', 'rest-2'],
+    });
+  });
+
+  test('updates favorites for the authenticated user', async () => {
+    const userId = '507f1f77bcf86cd799439011';
+    const token = jwt.sign({ userId, username: 'testuser', role: 'user' }, jwtSecret, { expiresIn: '1h' });
+    const usersCollection = createMockCollection({
+      findOneAndUpdateResult: {
+        value: {
+          _id: userId,
+          name: 'testuser',
+          email: 'test@example.com',
+          favorites: ['rest-3', 'rest-4'],
+          role: 'user',
+          createdAt: new Date('2026-05-19T00:00:00.000Z'),
+        },
+      },
+    });
+    dbModule.getDb.mockReturnValue(createMockDb({ User: usersCollection }));
+
+    const response = await request(app)
+      .put('/api/auth/favorites')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ favorites: ['rest-3', 'rest-4', 'rest-3'] });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      favorites: ['rest-3', 'rest-4'],
+    });
+    expect(usersCollection.findOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
 });
