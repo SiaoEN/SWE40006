@@ -45,9 +45,24 @@ function syncStoredUserFavorites(favoriteIds) {
     return;
   }
 
+  const normalizedFavorites = Array.from(new Set((favoriteIds || []).map((id) => String(id)).filter(Boolean)));
+
+  const existingFavorites = Array.isArray(storedUser.favorites)
+    ? Array.from(new Set(storedUser.favorites.map((id) => String(id)).filter(Boolean)))
+    : [];
+
+  // If the favorites haven't actually changed, avoid writing and emitting events to prevent
+  // unnecessary re-renders or potential event loops (ProfilePage listens for userUpdated).
+  const areEqual = normalizedFavorites.length === existingFavorites.length &&
+    normalizedFavorites.every((id) => existingFavorites.includes(id));
+
+  if (areEqual) {
+    return;
+  }
+
   const nextUser = {
     ...storedUser,
-    favorites: Array.from(new Set((favoriteIds || []).map((id) => String(id)).filter(Boolean))),
+    favorites: normalizedFavorites,
   };
 
   localStorage.setItem("user", JSON.stringify(nextUser));
