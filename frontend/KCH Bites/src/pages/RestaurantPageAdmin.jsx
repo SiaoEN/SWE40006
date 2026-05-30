@@ -8,6 +8,7 @@ import Footer from '../components/Footer';
 import "../styles/RestaurantPageAdmin.css";
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const RESTAURANTS_PER_PAGE = 15;
 
 const createEmptyOperatingHours = () =>
 	WEEK_DAYS.reduce((accumulator, day) => {
@@ -182,6 +183,7 @@ export default function RestaurantPageAdmin() {
 	const [lastCreatedRestaurant, setLastCreatedRestaurant] = useState(null);
 	const [previewRestaurant, setPreviewRestaurant] = useState(null);
 	const [showPreview, setShowPreview] = useState(false);
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const handleViewAsUser = (restaurant) => {
 		// hide dialog if open to avoid overlay blocking
@@ -202,6 +204,16 @@ export default function RestaurantPageAdmin() {
 	useEffect(() => {
 		fetchRestaurants();
 	}, []);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [restaurants.length]);
+
+	const totalRestaurants = restaurants.length;
+	const totalPages = Math.max(1, Math.ceil(totalRestaurants / RESTAURANTS_PER_PAGE));
+	const safeCurrentPage = Math.min(currentPage, totalPages);
+	const pageStartIndex = (safeCurrentPage - 1) * RESTAURANTS_PER_PAGE;
+	const visibleRestaurants = restaurants.slice(pageStartIndex, pageStartIndex + RESTAURANTS_PER_PAGE);
 
 	const fetchRestaurants = async () => {
 		try {
@@ -405,6 +417,32 @@ export default function RestaurantPageAdmin() {
 					<div className="empty-message">No restaurants found. Create one to get started!</div>
 				) : (
 					<div className="restaurants-table-wrapper">
+						<div className="restaurants-table-toolbar">
+							<div className="restaurants-table-count">
+								Total restaurants added: <strong>{totalRestaurants}</strong>
+							</div>
+							<div className="restaurants-table-pagination">
+								<span className="restaurants-table-page-label">
+									Page {safeCurrentPage} of {totalPages}
+								</span>
+								<button
+									type="button"
+									className="btn-table-page"
+									onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+									disabled={safeCurrentPage === 1 || loading}
+								>
+									Previous
+								</button>
+								<button
+									type="button"
+									className="btn-table-page"
+									onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+									disabled={safeCurrentPage === totalPages || loading}
+								>
+									Next
+								</button>
+							</div>
+						</div>
 						<table className="restaurants-table">
 							<thead>
 								<tr>
@@ -417,7 +455,7 @@ export default function RestaurantPageAdmin() {
 								</tr>
 							</thead>
 							<tbody>
-								{restaurants.map((restaurant) => (
+								{visibleRestaurants.map((restaurant) => (
 									<tr key={restaurant._id}>
 										<td>{restaurant.name}</td>
 										<td>{restaurant.address || "-"}</td>
