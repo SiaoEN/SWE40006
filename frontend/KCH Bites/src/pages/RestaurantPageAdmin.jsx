@@ -419,7 +419,7 @@ export default function RestaurantPageAdmin() {
 					<div className="restaurants-table-wrapper">
 						<div className="restaurants-table-toolbar">
 							<div className="restaurants-table-count">
-								Total restaurants added: <strong>{totalRestaurants}</strong>
+								Total Restaurants: <strong>{totalRestaurants}</strong>
 							</div>
 							<div className="restaurants-table-pagination">
 								<span className="restaurants-table-page-label">
