@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kch-bites-frontend
+    name: swe40006-frontend
     runtime: static
     rootDir: "frontend/KCH Bites"
     buildCommand: npm install --legacy-peer-deps --no-audit --no-fund && npm run build
@@ -10,7 +10,7 @@ services:
         source: /*
         destination: /index.html
   - type: web
-    name: kch-bites-backend
+    name: swe40006-backend
     runtime: node
     rootDir: backend
     buildCommand: npm install
