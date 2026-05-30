@@ -2,7 +2,25 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { icon as createLeafletIcon } from 'leaflet';
 import "leaflet/dist/leaflet.css";
+// Fix Leaflet default icon paths when bundlers (Vite) don't resolve CSS asset URLs
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+try {
+	// Delete any existing _getIconUrl to avoid conflicts
+	delete L.Icon.Default.prototype._getIconUrl;
+	L.Icon.Default.mergeOptions({
+		iconRetinaUrl: markerIcon2x,
+		iconUrl: markerIcon,
+		shadowUrl: markerShadow,
+	});
+} catch (e) {
+	// ignore if leaflet is not available in this environment
+}
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -215,6 +233,40 @@ export default function RestaurantPage() {
 
 		return null;
 	}, [restaurant]);
+
+	// Reuse the same marker SVG used on MainPage so map markers match
+	function createColoredMarkerIcon(fillColor) {
+		const svg = `
+			<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">
+				<path fill="${fillColor}" stroke="#ffffff" stroke-width="1.5" d="M12.5 0C6.2 0 1 5.2 1 11.5c0 8.9 11.5 29.5 11.5 29.5S24 20.4 24 11.5C24 5.2 18.8 0 12.5 0z"/>
+				<circle cx="12.5" cy="11.5" r="4.5" fill="#ffffff" opacity="0.95"/>
+			</svg>
+		`;
+
+		try {
+			const encoded = typeof window !== 'undefined' && window.btoa
+				? `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(svg)))}`
+				: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+			return createLeafletIcon({
+				iconUrl: encoded,
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34],
+				title: 'restaurant-marker',
+			});
+		} catch (err) {
+			return createLeafletIcon({
+				iconUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+				iconSize: [25, 41],
+				iconAnchor: [12, 41],
+				popupAnchor: [1, -34],
+				title: 'restaurant-marker',
+			});
+		}
+	}
+
+	const restaurantMarkerIcon = createColoredMarkerIcon('#2563eb');
 
 	const restaurantDistanceText = useMemo(() => {
 		if (!restaurantMapPoint || !userLocation || locationDenied) {
