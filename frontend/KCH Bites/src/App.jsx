@@ -17,7 +17,6 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   return (
-    <HashRouter>
     <Routes>
       <Route path="/" element={<Navigate to="/main" replace />} />
       <Route
@@ -134,6 +133,5 @@ export default function App() {
         }
       />
     </Routes>
-    </HashRouter>
   );
 }
