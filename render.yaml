@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kch-bites-frontend
+    runtime: static
+    rootDir: "frontend/KCH Bites"
+    buildCommand: npm install --legacy-peer-deps --no-audit --no-fund && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
