@@ -143,6 +143,7 @@ Build a practical food discovery platform for Kuching that supports:
 - Hosting: Render
 - CI/CD: GitHub + GitHub Actions
 - Monitoring: Render + UptimeRobot
+- Testing: Jest (Backend) + Vitest (Frontend)
 
 ## Team Setup (First Time)
 
@@ -180,7 +181,6 @@ Then open the local URL shown in the terminal (usually http://localhost:5173).
 - Password hashing before database storage
 - Input validation for username and password
 - Role-based route and feature protection
-- Restricted words checks in community content
 - Report flow for potentially abusive uploads/comments
 
 ## Course Context
