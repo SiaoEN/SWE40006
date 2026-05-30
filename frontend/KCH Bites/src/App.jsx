@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MainPage from "./pages/MainPage";
@@ -17,6 +17,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   return (
+    <HashRouter>
     <Routes>
       <Route path="/" element={<Navigate to="/main" replace />} />
       <Route
@@ -133,5 +134,6 @@ export default function App() {
         }
       />
     </Routes>
+    </HashRouter>
   );
 }
